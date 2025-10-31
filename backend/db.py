@@ -21,7 +21,7 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, futu
 
 # def init_db():
 #     Base.metadata.create_all(bind=engine)
-# Inicializar BBDD
+# Inicializar BBDD aqui o en main??
 
 def get_db():
     db = SessionLocal()
