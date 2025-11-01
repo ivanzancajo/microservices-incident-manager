@@ -6,8 +6,6 @@ def init_db():
     Crea las tablas de la base de datos a partir de los modelos
     si no existen.
     """
-    # 'engine' se importa desde db.py
-    # 'Base' se importa desde models.py
     Base.metadata.create_all(bind=engine)
 
 def seed_data():
