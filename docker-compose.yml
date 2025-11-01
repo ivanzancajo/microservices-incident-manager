@@ -1,0 +1,40 @@
+services:
+  # 1. Servicio de Base de Datos (PostgreSQL)
+  db:
+    image: postgres:15-alpine
+    port:
+      - "5432:5432" 
+    # Carga las variables desde el fichero .env
+    env_file:
+      - .env.example
+    # No se exponen puertos al exterior (requisito de seguridad)
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+
+    healthcheck:
+      # El healthcheck ahora usa las variables de entorno
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} -h localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # 2. Servicio Backend (Tu API)
+  api:
+    build: ./app # Mantenemos tu ruta './app'
+    env_file:
+      - .env.example
+    depends_on:
+      db:
+        # Espera a que la BD esté saludable
+        condition: service_healthy
+    ports:
+      - "8000:8000" # Expuesto para que el frontend (navegador) lo llame
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+ 
+# Definición de volúmenes persistentes
+volumes:
+  dbdata: {}
