@@ -32,3 +32,29 @@ def get_user_endpoint( user_id:int, db: Session = Depends(get_db)):
 def delete_user_endpoint( user_id:int, db: Session = Depends(get_db)):
     crud.delete_user(db, user_id)
     return {"ok": True}
+
+# Endpoints Incidentes
+
+@app.post("/incidentes", response_model=schemas.IncidentOut, status_code=201)
+def create_incident_endpoint(payload: schemas.IncidentCreate, db: Session = Depends(get_db)):
+    return crud.create_incident(db, payload)
+
+@app.get("/incidentes", response_model=list[schemas.IncidentOut])
+def list_incidents_endpoint( db: Session = Depends(get_db), limit: int = Query(100, ge=1, le=1000), offset: int = Query(0, ge=0)):
+    return crud.list_incidents(db, limit, offset)
+
+@app.get("/incidentes/{incident_id}", response_model=schemas.IncidentOut)
+def get_incident_endpoint( incident_id:int, db: Session = Depends(get_db)):
+    return crud.get_incident(db, incident_id)
+
+@app.put("/incidentes/{incident_id}", response_model=schemas.IncidentOut)
+def update_incident_endpoint( incident_id:int, payload: schemas.IncidentUpdate, db: Session = Depends(get_db)):
+    return crud.update_incident(db, incident_id, payload)
+
+@app.delete("/incidentes/{incident_id}", status_code=204)
+def delete_incident_endpoint( incident_id:int, db: Session = Depends(get_db)):
+    crud.delete_incident(db, incident_id)
+    return {"ok": True}
+
+
+
