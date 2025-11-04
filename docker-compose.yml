@@ -2,27 +2,32 @@ services:
   # 1. Servicio de Base de Datos (PostgreSQL)
   db:
     image: postgres:15-alpine
-    port:
+    ports:
       - "5432:5432" 
     # Carga las variables desde el fichero .env
     env_file:
-      - .env.example
+      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     # No se exponen puertos al exterior (requisito de seguridad)
     volumes:
       - dbdata:/var/lib/postgresql/data
 
     healthcheck:
       # El healthcheck ahora usa las variables de entorno
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} -h localhost"]
+      test: ["CMD-SHELL", "psql -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 3s
       retries: 10
+      start_period: 10s
 
   # 2. Servicio Backend (Tu API)
   api:
-    build: ./app # Mantenemos tu ruta './app'
+    build: ./backend # Mantenemos tu ruta './app'
     env_file:
-      - .env.example
+      - .env
     depends_on:
       db:
         # Espera a que la BD esté saludable
