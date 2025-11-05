@@ -56,7 +56,7 @@ const fetchIncidents = async () => {
   isLoading.value = true;
   error.value = null;
   try {
-    const response = await apiClient.get('/incidencias');
+    const response = await apiClient.get('/incidentes');
     incidents.value = response.data;
   } catch (err) {
     console.error("Error al cargar incidencias:", err);

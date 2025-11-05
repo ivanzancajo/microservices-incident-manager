@@ -39,7 +39,7 @@
       <!-- CAMPO USUARIO (Esto faltaba) -->
       <div class="form-group">
         <label for="user">Asignar a Usuario:</label>
-        <select id="user" v-model="incidentData.id_user" required>
+        <select id="user" v-model="incidentData.user_id" required>
           <option :value="null" disabled>Selecciona un usuario...</option>
           <option v-for="user in users" :key="user.id" :value="user.id">
             {{ user.name }} ({{ user.email }})
@@ -101,7 +101,7 @@ const incidentData = ref({
   title: '',
   description: '',
   status: 'Abierta',
-  id_user: null
+  user_id: null
 });
 
 const users = ref([]);
@@ -135,7 +135,7 @@ watch(() => props.incidentToEdit, (newIncident) => {
       title: newIncident.title,
       description: newIncident.description,
       status: newIncident.status,
-      id_user: newIncident.id_user // O newIncident.owner.id si lo tienes
+      user_id: newIncident.user_id // O newIncident.owner.id si lo tienes
     };
   } else {
     // Si 'incidentToEdit' es null, reseteamos el formulario
@@ -151,7 +151,7 @@ const resetForm = () => {
     title: '',
     description: '',
     status: 'Abierta',
-    id_user: null
+    user_id: null
   };
 };
 
@@ -164,13 +164,13 @@ const handleSubmit = async () => {
     if (isEditing.value) {
       // --- Lógica de ACTUALIZAR (PUT) ---
       await apiClient.put(
-        `/incidencias/${incidentIdToUpdate.value}`, 
+        `/incidentes/${incidentIdToUpdate.value}`, 
         incidentData.value
       );
       alert("¡Incidencia actualizada con éxito!");
     } else {
       // --- Lógica de CREAR (POST) ---
-      await apiClient.post('/incidencias', incidentData.value);
+      await apiClient.post('/incidentes', incidentData.value);
       alert("¡Incidencia registrada con éxito!");
     }
     
