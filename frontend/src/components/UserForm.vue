@@ -4,16 +4,19 @@
     
     <form @submit.prevent="handleSubmit">
       
+      <!-- Campo Name -->
       <div class="form-group">
-        <label for="username">Nombre de usuario:</label>
+        <!-- El 'for' y el 'id' deben ser 'name' -->
+        <label for="name">Nombre:</label> 
         <input 
           type="text" 
-          id="username" 
-          v-model="userData.username" 
+          id="name" 
+          v-model="userData.name" 
           required 
         />
       </div>
       
+      <!-- Campo Email -->
       <div class="form-group">
         <label for="email">Email:</label>
         <input 

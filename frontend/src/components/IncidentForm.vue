@@ -186,6 +186,9 @@ const handleSubmit = async () => {
     incidentIdToUpdate.value = null;
   }
 };
+// --- Exponer la función para que App.vue pueda llamarla ---
+defineExpose({ fetchUsersForSelect });
+
 </script>
 
 <style scoped>
