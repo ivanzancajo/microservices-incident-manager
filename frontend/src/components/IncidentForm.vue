@@ -5,7 +5,7 @@
     
     <form @submit.prevent="handleSubmit">
       
-      <!-- CAMPO TÍTULO (Esto faltaba) -->
+      <!-- CAMPO TÍTULO -->
       <div class="form-group">
         <label for="title">Título:</label>
         <input 
@@ -16,7 +16,7 @@
         />
       </div>
       
-      <!-- CAMPO DESCRIPCIÓN (Esto faltaba) -->
+      <!-- CAMPO DESCRIPCIÓN -->
       <div class="form-group">
         <label for="description">Descripción:</label>
         <textarea 
@@ -26,7 +26,7 @@
         ></textarea>
       </div>
 
-      <!-- CAMPO ESTADO (Esto faltaba) -->
+      <!-- CAMPO ESTADO -->
       <div class="form-group">
         <label for="status">Estado:</label>
         <select id="status" v-model="incidentData.status" required>
@@ -36,17 +36,18 @@
         </select>
       </div>
 
-      <!-- CAMPO USUARIO (Esto faltaba) -->
+      <!-- CAMPO USUARIO (Selector) -->
       <div class="form-group">
         <label for="user">Asignar a Usuario:</label>
         <select id="user" v-model="incidentData.user_id" required>
           <option :value="null" disabled>Selecciona un usuario...</option>
+          <!-- Itera sobre el array 'users' que se llena con la API -->
           <option v-for="user in users" :key="user.id" :value="user.id">
             {{ user.name }} ({{ user.email }})
           </option>
         </select>
         <div v-if="userError" class="error-message">
-          Error al cargar usuarios.
+          Error al cargar usuarios. Por favor, inténtalo de nuevo.
         </div>
       </div>
       
@@ -65,30 +66,19 @@
         Cancelar
       </button>
 
-      <!-- MENSAJE DE ERROR (Esto faltaba) -->
+      <!-- MENSAJE DE ERROR -->
       <div v-if="submitError" class="error-message">
-        Error al crear incidencia: {{ submitError.message }}
+        Error al guardar incidencia: {{ submitError.message || submitError }}
       </div>
     </form>
   </div>
 </template>
 
-<style scoped>
-/* ... (todos tus estilos anteriores) ... */
-.btn-cancel {
-  background-color: #6c757d;
-  margin-left: 10px;
-}
-.btn-cancel:hover {
-  background-color: #5a6268;
-}
-</style>
 <script setup>
-import { ref, onMounted, watch } from 'vue'; // <-- Añade 'watch'
+import { ref, onMounted, watch } from 'vue';
 import apiClient from '@/services/api.js';
 
 // --- Definir props ---
-// 'incidentToEdit' será el objeto que nos pase App.vue
 const props = defineProps({
   incidentToEdit: {
     type: Object,
@@ -114,36 +104,47 @@ const isEditing = ref(false);
 const incidentIdToUpdate = ref(null);
 
 // --- Definir eventos ---
-// Cambiamos 'incident-created' por 'incident-saved' (más genérico)
 const emit = defineEmits(['incident-saved']);
 
-// --- Cargar usuarios (esto no cambia) ---
+// --- LÓGICA DE FETCH: Cargar usuarios para el selector ---
 const fetchUsersForSelect = async () => {
-  // ... (tu función fetchUsersForSelect existente) ...
+  userError.value = null; // Limpiar errores
+  try {
+    // PETICIÓN GET: Asumiendo que el endpoint para listar usuarios es '/usuarios'
+    const response = await apiClient.get('/usuarios');
+    // Asumiendo que la respuesta exitosa contiene el array de usuarios en 'response.data'
+    users.value = response.data;
+  } catch (err) {
+    console.error("Error fetching users:", err);
+    userError.value = err;
+  }
 };
+
+// Cargar usuarios inmediatamente después de que el componente sea montado
 onMounted(fetchUsersForSelect);
 
-// --- NUEVO: Observador (watch) ---
-// Esto se ejecutará cada vez que 'incidentToEdit' cambie
+// --- Observador (watch) para el modo edición ---
 watch(() => props.incidentToEdit, (newIncident) => {
-  if (newIncident) {
-    // Si recibimos una incidencia, rellenamos el formulario
+  if (newIncident && newIncident.id) {
+    // Entrar en modo edición
     isEditing.value = true;
     incidentIdToUpdate.value = newIncident.id;
     
+    // Rellenar incidentData con los datos de la incidencia a editar
     incidentData.value = {
-      title: newIncident.title,
-      description: newIncident.description,
-      status: newIncident.status,
-      user_id: newIncident.user_id // O newIncident.owner.id si lo tienes
+      title: newIncident.title || '',
+      description: newIncident.description || '',
+      status: newIncident.status || 'Abierta',
+      // Es crucial que 'user_id' coincida con el valor esperado en <select>
+      user_id: newIncident.user_id || null 
     };
   } else {
-    // Si 'incidentToEdit' es null, reseteamos el formulario
+    // Salir del modo edición / Resetear
     isEditing.value = false;
     incidentIdToUpdate.value = null;
     resetForm();
   }
-});
+}, { immediate: true }); // 'immediate: true' ejecuta el watch al inicio si es necesario
 
 // --- Función para limpiar el formulario ---
 const resetForm = () => {
@@ -155,50 +156,59 @@ const resetForm = () => {
   };
 };
 
-// --- Función de envío (ACTUALIZADA) ---
+// --- Función de envío (Crear o Actualizar) ---
 const handleSubmit = async () => {
   isLoading.value = true;
   submitError.value = null;
 
   try {
     if (isEditing.value) {
-      // --- Lógica de ACTUALIZAR (PUT) ---
+      // Lógica de ACTUALIZAR (PUT/PATCH)
       await apiClient.put(
         `/incidentes/${incidentIdToUpdate.value}`, 
         incidentData.value
       );
       alert("¡Incidencia actualizada con éxito!");
     } else {
-      // --- Lógica de CREAR (POST) ---
+      // Lógica de CREAR (POST)
       await apiClient.post('/incidentes', incidentData.value);
       alert("¡Incidencia registrada con éxito!");
     }
     
-    emit('incident-saved'); // Avisamos a App.vue
-    resetForm(); // Limpiamos el formulario
+    emit('incident-saved'); // Notificar al padre para recargar la lista
+    resetForm(); // Limpiar el formulario
+    isEditing.value = false;
+    incidentIdToUpdate.value = null;
 
   } catch (err) {
     console.error("Error al guardar incidencia:", err);
-    submitError.value = err.response ? err.response.data : err;
+    // Intentar extraer un mensaje de error útil de la respuesta
+    submitError.value = err.response && err.response.data && err.response.data.message 
+                        ? { message: err.response.data.message } 
+                        : { message: 'Fallo la conexión con el servidor o el servidor devolvió un error desconocido.' };
   } finally {
     isLoading.value = false;
-    isEditing.value = false; // Reseteamos el modo edición
-    incidentIdToUpdate.value = null;
   }
 };
-// --- Exponer la función para que App.vue pueda llamarla ---
+
+// Exponer fetchUsersForSelect (por si el componente padre necesita forzar la recarga)
 defineExpose({ fetchUsersForSelect });
 
 </script>
 
 <style scoped>
-/* (Puedes reusar los estilos de UserForm o copiarlos aquí) */
 .form-container {
   max-width: 400px;
   margin: 20px auto;
   padding: 20px;
   border: 1px solid #ccc;
   border-radius: 8px;
+  font-family: Arial, sans-serif;
+}
+h3 {
+  text-align: center;
+  color: #333;
+  margin-bottom: 20px;
 }
 .form-group {
   margin-bottom: 15px;
@@ -206,24 +216,61 @@ defineExpose({ fetchUsersForSelect });
 .form-group label {
   display: block;
   margin-bottom: 5px;
+  font-weight: 600;
+  color: #555;
 }
 .form-group input,
 .form-group textarea,
 .form-group select {
   width: 100%;
-  padding: 8px;
-  box-sizing: border-box; /* Asegura que el padding no rompa el ancho */
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-sizing: border-box; 
+  transition: border-color 0.3s;
+}
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+  border-color: #007bff;
+  outline: none;
+}
+.form-group textarea {
+    resize: vertical;
+    min-height: 100px;
 }
 button {
-  background-color: #28a745;
+  background-color: #28a745; /* Color principal */
   color: white;
   padding: 10px 15px;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
+  font-weight: 600;
+  transition: background-color 0.3s;
+  margin-top: 10px;
+}
+button:hover:not(:disabled) {
+  background-color: #218838;
+}
+button:disabled {
+  background-color: #aaa;
+  cursor: not-allowed;
+}
+.btn-cancel {
+  background-color: #6c757d;
+  margin-left: 10px;
+}
+.btn-cancel:hover {
+  background-color: #5a6268;
 }
 .error-message {
-  color: #c00;
-  margin-top: 10px;
+  color: #dc3545;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  padding: 10px;
+  border-radius: 6px;
+  margin-top: 15px;
+  font-size: 0.9em;
 }
 </style>
