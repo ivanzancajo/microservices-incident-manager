@@ -125,26 +125,24 @@ onMounted(fetchUsersForSelect);
 
 // --- Observador (watch) para el modo edición ---
 watch(() => props.incidentToEdit, (newIncident) => {
-  if (newIncident && newIncident.id) {
-    // Entrar en modo edición
+  if (newIncident) {
+    // Si recibimos una incidencia, rellenamos el formulario
     isEditing.value = true;
     incidentIdToUpdate.value = newIncident.id;
     
-    // Rellenar incidentData con los datos de la incidencia a editar
     incidentData.value = {
-      title: newIncident.title || '',
-      description: newIncident.description || '',
-      status: newIncident.status || 'Abierta',
-      // Es crucial que 'user_id' coincida con el valor esperado en <select>
-      user_id: newIncident.user_id || null 
+      title: newIncident.title,
+      description: newIncident.description,
+      status: newIncident.status,
+      user_id: newIncident.id_user // <-- CAMBIO AQUÍ (Lee 'id_user' del prop)
     };
   } else {
-    // Salir del modo edición / Resetear
+    // Si 'incidentToEdit' es null, reseteamos el formulario
     isEditing.value = false;
     incidentIdToUpdate.value = null;
     resetForm();
   }
-}, { immediate: true }); // 'immediate: true' ejecuta el watch al inicio si es necesario
+});
 
 // --- Función para limpiar el formulario ---
 const resetForm = () => {

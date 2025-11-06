@@ -9,7 +9,8 @@ class User(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
 
-    incidents = relationship("Incident", back_populates="owner")
+    incidents = relationship("Incident", back_populates="owner", cascade="all, delete-orphan")
+    
 
 
 class Incident(Base):

@@ -16,7 +16,7 @@ class IncidentBase(BaseModel):
     status: str = Field(min_length=1, max_length=50)
 
 class IncidentCreate(IncidentBase):
-    user_id: int
+    id_user: int
 
 class IncidentUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=100)
@@ -25,7 +25,7 @@ class IncidentUpdate(BaseModel):
 
 class IncidentOut(IncidentBase):
     id: int
-    user_id: int
+    id_user: int
 
     class Config:
         orm_mode = True

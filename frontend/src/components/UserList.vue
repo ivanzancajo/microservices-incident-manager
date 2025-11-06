@@ -43,6 +43,7 @@ import apiClient from '@/services/api.js'; // Importamos nuestro cliente API
 const users = ref([]);        // Almacena la lista de usuarios
 const isLoading = ref(true);  // Para mostrar un mensaje de "cargando"
 const error = ref(null);      // Para almacenar un error si la API falla
+const emit = defineEmits(['delete-user']); // Evento para notificar eliminación de un usuario
 
 // --- Función para cargar usuarios ---
 const fetchUsers = async () => {
@@ -60,20 +61,12 @@ const fetchUsers = async () => {
 };
 
 // --- Función para eliminar un usuario ---
-// (El enunciado también pide eliminar usuarios [cite: 25])
-const deleteUser = async (id) => {
-  if (!confirm('¿Estás seguro de que quieres eliminar este usuario?')) {
+const deleteUser = (id) => {
+  if (!confirm('¿Estás seguro de que quieres eliminar este usuario? Esto borrará TODAS sus incidencias asociadas.')) {
     return;
   }
 
-  try {
-    await apiClient.delete(`/usuarios/${id}`);
-    // Después de borrar, actualizamos la lista
-    fetchUsers(); 
-  } catch (err) {
-    console.error(`Error al eliminar usuario ${id}:`, err);
-    alert("Error al eliminar el usuario.");
-  }
+  emit('delete-user', id);
 };
 
 // --- Hook del ciclo de vida ---

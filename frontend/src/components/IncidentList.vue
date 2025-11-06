@@ -72,7 +72,7 @@ const deleteIncident = async (id) => {
     return;
   }
   try {
-    await apiClient.delete(`/incidencias/${id}`);
+    await apiClient.delete(`/incidentes/${id}`);
     fetchIncidents(); // Recargamos la lista
   } catch (err) {
     console.error(`Error al eliminar incidencia ${id}:`, err);
