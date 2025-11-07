@@ -28,7 +28,7 @@ def delete_user(db: Session, user_id: int):
     db.commit()
 
 def create_incident(db: Session, data: schemas.IncidentCreate):
-    user = get_user(db, data.user_id)
+    user = get_user(db, data.id_user)
     incident = models.Incident(title=data.title, description=data.description, status=data.status, owner=user)
     db.add(incident)
     db.commit()
