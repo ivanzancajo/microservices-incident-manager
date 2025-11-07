@@ -39,7 +39,7 @@
       <!-- CAMPO USUARIO (Selector) -->
       <div class="form-group">
         <label for="user">Asignar a Usuario:</label>
-        <select id="user" v-model="incidentData.user_id" required>
+        <select id="user" v-model="incidentData.id_user" required>
           <option :value="null" disabled>Selecciona un usuario...</option>
           <!-- Itera sobre el array 'users' que se llena con la API -->
           <option v-for="user in users" :key="user.id" :value="user.id">
@@ -77,6 +77,20 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue';
 import apiClient from '@/services/api.js';
+
+// --- Diccionario de mapeo (visible → backend) ---
+const statusMap = {
+  "Abierta": "abierta",
+  "En Progreso": "en_progreso",
+  "Cerrada": "cerrada"
+};
+
+// --- Mapeo inverso (backend → visible) ---
+const statusReverseMap = {
+  "abierta": "Abierta",
+  "en_progreso": "En Progreso",
+  "cerrada": "Cerrada"
+};
 
 // --- Definir props ---
 const props = defineProps({
@@ -133,7 +147,7 @@ watch(() => props.incidentToEdit, (newIncident) => {
     incidentData.value = {
       title: newIncident.title,
       description: newIncident.description,
-      status: newIncident.status,
+      status: statusReverseMap[newIncident.status] || "Abierta",
       user_id: newIncident.id_user // <-- CAMBIO AQUÍ (Lee 'id_user' del prop)
     };
   } else {
@@ -160,16 +174,22 @@ const handleSubmit = async () => {
   submitError.value = null;
 
   try {
+    // Traduccion al formato del backend
+    const payload = {
+      ...incidentData.value,
+      status: statusMap[incidentData.value.status] || 'abierta'
+    };
+
     if (isEditing.value) {
       // Lógica de ACTUALIZAR (PUT/PATCH)
       await apiClient.put(
-        `/incidentes/${incidentIdToUpdate.value}`, 
-        incidentData.value
+        `/incidencias/${incidentIdToUpdate.value}`, 
+        payload
       );
       alert("¡Incidencia actualizada con éxito!");
     } else {
       // Lógica de CREAR (POST)
-      await apiClient.post('/incidentes', incidentData.value);
+      await apiClient.post('/incidencias', payload);
       alert("¡Incidencia registrada con éxito!");
     }
     
