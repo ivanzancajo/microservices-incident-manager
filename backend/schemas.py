@@ -1,4 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field
+from enums import StatusEnum
 
 class UserBase(BaseModel):
     name: str = Field(min_length=1, max_length=100)
@@ -13,19 +14,19 @@ class UserOut(UserBase):
 class IncidentBase(BaseModel):
     title: str = Field(min_length=1, max_length=100)
     description: str = Field(min_length=1, max_length=200)
-    status: str = Field(min_length=1, max_length=50)
+    status: StatusEnum
 
 class IncidentCreate(IncidentBase):
-    user_id: int
+    id_user: int
 
 class IncidentUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=100)
     description: str | None = Field(default=None, min_length=1, max_length=200)
-    status: str | None = Field(default=None, min_length=1, max_length=50)
+    status: StatusEnum | None = Field(default=StatusEnum.abierta) 
 
 class IncidentOut(IncidentBase):
     id: int
-    user_id: int
+    id_user: int
 
     class Config:
         orm_mode = True
