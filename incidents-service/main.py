@@ -24,6 +24,10 @@ def health():
 def get_incident_endpoint( incident_id:int, db: Session = Depends(get_db)):
     return crud.get_incident(db, incident_id)
 
+@app.put("/incidencias/{incident_id}", response_model=schemas.IncidentOut)
+def update_incident_endpoint( incident_id:int, payload: schemas.IncidentUpdate, db: Session = Depends(get_db)):
+    return crud.update_incident(db, incident_id, payload)
+
 
 
 
