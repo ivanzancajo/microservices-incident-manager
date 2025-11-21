@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+sqlalchemy>=2.0
+psycopg[binary]
+pydantic>=2
+pydantic[email]
+python-multipart
+python-dotenv
