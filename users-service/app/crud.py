@@ -18,3 +18,7 @@ def create_user(db: Session, data: schemas.UserCreate):
     db.commit()
     db.refresh(user)
     return user
+
+def list_users(db: Session, limit: int = 100, offset: int = 0):
+    stmt = select(models.User).offset(offset).limit(limit)
+    return list(db.scalars(stmt).all())

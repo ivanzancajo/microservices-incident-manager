@@ -19,12 +19,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/health")
-def health():
-    return {"status": "ok", "service": "users-service"}
-
 # --- Endpoints de Usuarios ---
 
 @app.post("/usuarios", response_model=schemas.UserOut, status_code=201)
 def create_user_endpoint(payload: schemas.UserCreate, db: Session = Depends(get_db)):
     return crud.create_user(db, payload)
+
+@app.get("/usuarios", response_model=list[schemas.UserOut])
+def list_users_endpoint(
+    db: Session = Depends(get_db), 
+    limit: int = Query(100, ge=1, le=1000), 
+    offset: int = Query(0, ge=0)
+):
+    return crud.list_users(db, limit, offset)
