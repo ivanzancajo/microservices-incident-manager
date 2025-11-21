@@ -6,7 +6,7 @@ from db import Base, engine, get_db
 import models, schemas, crud
 
 Base.metadata.create_all(bind=engine)
-app = FastAPI(title="Servicio de Usuarios con Persistencia")
+app = FastAPI(title="Microservicio de Indicencias")
 
 # Middleware CORS
 app.add_middleware(
