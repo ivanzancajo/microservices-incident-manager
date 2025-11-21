@@ -31,3 +31,9 @@ def get_user(db: Session, user_id: int):
             detail="Usuario no encontrado"
         )
     return user
+
+def delete_user(db: Session, user_id: int):
+    # Reutilizamos get_user para asegurar que existe o lanzar 404
+    user = get_user(db, user_id)
+    db.delete(user)
+    db.commit()

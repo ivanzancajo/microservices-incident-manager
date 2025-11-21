@@ -36,3 +36,9 @@ def list_users_endpoint(
 @app.get("/usuarios/{user_id}", response_model=schemas.UserOut)
 def get_user_endpoint(user_id: int, db: Session = Depends(get_db)):
     return crud.get_user(db, user_id)
+
+@app.delete("/usuarios/{user_id}", status_code=204)
+def delete_user_endpoint(user_id: int, db: Session = Depends(get_db)):
+    crud.delete_user(db, user_id)
+    # Nota: Con status_code=204, no se debe retornar contenido en el body.
+    return
