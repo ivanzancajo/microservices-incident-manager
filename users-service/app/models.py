@@ -1,6 +1,5 @@
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import String, Integer
-# Nota: Importamos Base desde .database (el archivo que creamos en el paso anterior)
 from .database import Base 
 
 class User(Base):
