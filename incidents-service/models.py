@@ -1,17 +1,8 @@
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String, Integer, ForeignKey, Enum
+from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import String, Integer, ForeignKey, Enum, DateTime
+from sqlalchemy.sql import func
 from db import Base
 from enums import StatusEnum
-
-class User(Base):
-    __tablename__ = "users"
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    name: Mapped[str] = mapped_column(String(100), nullable=False)
-    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
-
-    incidents = relationship("Incident", back_populates="owner", cascade="all, delete-orphan")
-    
-
 
 class Incident(Base):
     __tablename__ = "incidents"
@@ -19,6 +10,8 @@ class Incident(Base):
     title: Mapped[str] = mapped_column(String(100), nullable=False)
     description: Mapped[str] = mapped_column(String(200), nullable=False)
     status: Mapped[str] = mapped_column(Enum(StatusEnum), default=StatusEnum.abierta, nullable=False)
-
-    id_user =  mapped_column(Integer, ForeignKey("users.id"), nullable=False)
-    owner = relationship("User", back_populates="incidents") 
+    user_id =  Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    

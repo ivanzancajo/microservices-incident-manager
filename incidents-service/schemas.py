@@ -1,32 +1,24 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 from enums import StatusEnum
-
-class UserBase(BaseModel):
-    name: str = Field(min_length=1, max_length=100)
-    email: EmailStr
-    
-class UserCreate(UserBase):
-    pass
-
-class UserOut(UserBase):
-    id: int
 
 class IncidentBase(BaseModel):
     title: str = Field(min_length=1, max_length=100)
     description: str = Field(min_length=1, max_length=200)
-    status: StatusEnum
 
 class IncidentCreate(IncidentBase):
-    id_user: int
+    user_id: int
+    status: StatusEnum = StatusEnum.abierta
 
 class IncidentUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=100)
     description: str | None = Field(default=None, min_length=1, max_length=200)
-    status: StatusEnum | None = Field(default=StatusEnum.abierta) 
+    status: Optional[StatusEnum] = None
 
 class IncidentOut(IncidentBase):
     id: int
-    id_user: int
+    user_id: int
+    status: StatusEnum
+    created_at: datetime
 
     class Config:
         orm_mode = True
