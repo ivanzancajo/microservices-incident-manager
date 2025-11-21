@@ -22,3 +22,12 @@ def create_user(db: Session, data: schemas.UserCreate):
 def list_users(db: Session, limit: int = 100, offset: int = 0):
     stmt = select(models.User).offset(offset).limit(limit)
     return list(db.scalars(stmt).all())
+
+def get_user(db: Session, user_id: int):
+    user = db.get(models.User, user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="Usuario no encontrado"
+        )
+    return user

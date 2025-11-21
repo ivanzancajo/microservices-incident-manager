@@ -32,3 +32,7 @@ def list_users_endpoint(
     offset: int = Query(0, ge=0)
 ):
     return crud.list_users(db, limit, offset)
+
+@app.get("/usuarios/{user_id}", response_model=schemas.UserOut)
+def get_user_endpoint(user_id: int, db: Session = Depends(get_db)):
+    return crud.get_user(db, user_id)
