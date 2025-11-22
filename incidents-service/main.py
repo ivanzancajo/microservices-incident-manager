@@ -2,21 +2,20 @@ from fastapi import FastAPI, Depends, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
-from .database import Base, engine, get_db
-from . import models, schemas, crud
+from db import Base, engine, get_db
+import models, schemas, crud
 
-# Crear las tablas de la BD de Incidencias al arrancar
 Base.metadata.create_all(bind=engine)
+app = FastAPI(title="Microservicio de Indicencias")
 
-app = FastAPI(title="Microservicio de Incidencias")
-
-# Middleware CORS 
+# Middleware CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # --- Endpoints de Incidencias ---
 
