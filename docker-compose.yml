@@ -57,9 +57,69 @@ services:
       retries: 10
     networks:
       - app-network
+  
+  # 3. Base de datos de incidencias
+  incidents-db:
+    image: postgres:15-alpine
+    container_name: incidents_db_container
+    restart: always
+    env_file:
+      - .env
+    environment:
+      # Variables específicas para incidencias (incidents_db)
+      POSTGRES_USER: ${INCIDENTS_DB_USER}
+      POSTGRES_PASSWORD: ${INCIDENTS_DB_PASSWORD}
+      POSTGRES_DB: ${INCIDENTS_DB_NAME}
+    volumes:
+      - incidents_data:/var/lib/postgresql/data
+    healthcheck:
+      # Usamos pg_isready o psql. pg_isready es muy ligero y estándar en Alpine.
+      test: ["CMD-SHELL", "pg_isready -U ${INCIDENTS_DB_USER} -d ${INCIDENTS_DB_NAME}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    networks:
+      - app-network
+
+  # 4. Microservicio de Incidencias
+  incidents-service:
+    build: ./incidents-service
+    container_name: incidents_service_container
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      incidents-db:
+        condition: service_healthy
+      # Espera a que users-service haya arrancado
+      # para evitar errores de conexión en las validaciones HTTP iniciales.
+      users-service:
+        condition: service_started
+    environment:
+      # Credenciales BBDD Incidencias
+      DB_USER: ${INCIDENTS_DB_USER}
+      DB_PASSWORD: ${INCIDENTS_DB_PASSWORD}
+      DB_NAME: ${INCIDENTS_DB_NAME}
+      DB_HOST: incidents-db
+      DB_PORT: 5432
+      # URL para llamar al servicio de usuarios (Validación HTTP)
+      # Usa el nombre del servicio definido arriba: 'users-service' puerto 8000 interno
+      USERS_SERVICE_URL: ${USERS_SERVICE_URL}
+    ports:
+      # Mapeamos al 8002 para evitar conflicto con usuarios (8001)
+      - "8002:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - app-network
 
 volumes:
   users_data: {}
+  incidents_data: {}
 
 networks:
   app-network:
