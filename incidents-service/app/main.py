@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Depends, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+import external
 
 from db import Base, engine, get_db
 import models, schemas, crud
@@ -21,6 +22,7 @@ app.add_middleware(
 
 @app.post("/incidencias", response_model=schemas.IncidentOut, status_code=201)
 def create_incident_endpoint(payload: schemas.IncidentCreate, db: Session = Depends(get_db)):
+    external.validate_user_exists(payload.user_id)
     return crud.create_incident(db, payload)
 
 @app.get("/incidencias", response_model=list[schemas.IncidentOut])
