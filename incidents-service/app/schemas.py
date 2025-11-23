@@ -1,5 +1,7 @@
+from typing import Optional
 from pydantic import BaseModel, Field
-from enums import StatusEnum
+from .enums import StatusEnum
+from datetime import datetime
 
 class IncidentBase(BaseModel):
     title: str = Field(min_length=1, max_length=100)

@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from fastapi import HTTPException, status
-import models, schemas
+from . import models, schemas
 
 def get_incident(db: Session, incident_id: int):
     incident = db.get(models.Incident, incident_id)

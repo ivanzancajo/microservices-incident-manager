@@ -2,8 +2,9 @@ from fastapi import FastAPI, Depends, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
-from db import Base, engine, get_db
-import models, schemas, crud
+from .db import Base, engine, get_db
+from . import models, schemas, crud
+from . import external
 
 Base.metadata.create_all(bind=engine)
 app = FastAPI(title="Microservicio de Indicencias")
