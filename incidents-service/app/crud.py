@@ -14,10 +14,13 @@ def create_incident(db: Session, data: schemas.IncidentCreate):
     # Creamos la instancia del modelo
     incident = models.Incident(
         title=data.title, 
-        description=data.description, 
-        severity=data.severity
+        description=data.description,
+        user_id=data.user_id
     )
     db.add(incident)
+    db.commit()
+    db.refresh(incident)
+    return incident
 
 def get_incident(db: Session, incident_id: int):
     incident = db.get(models.Incident, incident_id)
