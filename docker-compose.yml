@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  # -----------------------------------------------------------------
+  # 👤 ECOSYSTEM: USERS
+  # -----------------------------------------------------------------
+  
+  # 1. Base de Datos de Usuarios
+  users-db:
+    image: postgres:15-alpine
+    container_name: users_db_container
+    restart: always
+    env_file:
+      - .env
+    environment:
+      # Usamos las variables específicas de usuarios definidas en el .env
+      POSTGRES_USER: ${USERS_DB_USER}
+      POSTGRES_PASSWORD: ${USERS_DB_PASSWORD}
+      POSTGRES_DB: ${USERS_DB_NAME}
+    volumes:
+      - users_data:/var/lib/postgresql/data
+    healthcheck:
+      # Adaptamos el check para usar las variables correctas
+      test: ["CMD-SHELL", "psql -U ${USERS_DB_USER} -d ${USERS_DB_NAME}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    networks:
+      - app-network
+
+  # 2. Microservicio de Usuarios
+  users-service:
+    build: ./users-service # Apunta a la carpeta en la raíz
+    container_name: users_service_container
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      users-db:
+        condition: service_healthy
+    environment:
+      # Mapeo: Lo que espera Python (DB_...) = Lo que hay en el .env (USERS_DB_...)
+      DB_USER: ${USERS_DB_USER}
+      DB_PASSWORD: ${USERS_DB_PASSWORD}
+      DB_NAME: ${USERS_DB_NAME}
+      DB_HOST: users-db  # Nombre del servicio de arriba
+      DB_PORT: 5432
+    ports:
+      # Exponemos el 8001 para probarlo ahora (luego lo cerraremos al poner el Gateway)
+      - "8001:8000"
+    healthcheck:
+      # Verifica que FastAPI responda en /health
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - app-network
+
+volumes:
+  users_data: {}
+
+networks:
+  app-network:
+    driver: bridge
