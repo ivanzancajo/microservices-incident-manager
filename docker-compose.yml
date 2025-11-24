@@ -1,4 +1,5 @@
 services:
+
   # -----------------------------------------------------------------
   # 👤 ECOSYSTEM: USERS
   # -----------------------------------------------------------------
@@ -44,9 +45,6 @@ services:
       DB_NAME: ${USERS_DB_NAME}
       DB_HOST: users-db  # Nombre del servicio de arriba
       DB_PORT: 5432
-    ports:
-      # Exponemos el 8001 para probarlo ahora (luego lo cerraremos al poner el Gateway)
-      - "8001:8000"
     healthcheck:
       # Verifica que FastAPI responda en /health
       test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
@@ -104,9 +102,6 @@ services:
       # URL para llamar al servicio de usuarios (Validación HTTP)
       # Usa el nombre del servicio definido arriba: 'users-service' puerto 8000 interno
       USERS_SERVICE_URL: ${USERS_SERVICE_URL}
-    ports:
-      # Mapeamos al 8002 para evitar conflicto con usuarios (8001)
-      - "8002:8000"
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
       interval: 5s
