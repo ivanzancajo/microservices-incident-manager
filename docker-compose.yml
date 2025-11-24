@@ -1,5 +1,20 @@
 services:
 
+  # =================================================================
+  # 🚪 API GATEWAY (Único Punto de Acceso Público)
+  # =================================================================
+  gateway:
+    build: ./gateway
+    container_name: api_gateway
+    restart: always
+    ports:
+      - "8080:80" # <--- ÚNICO PUERTO ABIERTO AL MUNDO EXTERIOR
+    depends_on:
+      - users-service
+      - incidents-service
+    networks:
+      - app-network
+      
   # -----------------------------------------------------------------
   # 👤 ECOSYSTEM: USERS
   # -----------------------------------------------------------------
