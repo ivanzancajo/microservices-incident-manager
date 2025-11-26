@@ -3,7 +3,7 @@ import { ref, onMounted } from 'vue';
 import { getUsers, createUser, deleteUser } from '../api';
 
 const users = ref([]);
-const newUser = ref({ username: '', email: '' });
+const newUser = ref({ name: '', email: '' });
 const error = ref(null);
 const isLoading = ref(true);
 
@@ -20,13 +20,13 @@ const fetchUsers = async () => {
 };
 
 const handleCreateUser = async () => {
-  if (!newUser.value.username || !newUser.value.email) {
-    error.value = 'Username and email are required.';
+  if (!newUser.value.name || !newUser.value.email) {
+    error.value = 'Name and email are required.';
     return;
   }
   try {
     await createUser({ ...newUser.value });
-    newUser.value = { username: '', email: '' }; // Reset form
+    newUser.value = { name: '', email: '' }; // Reset form
     await fetchUsers(); // Refresh list
   } catch (err) {
     error.value = `Error creating user: ${err.message}`;
@@ -51,7 +51,7 @@ onMounted(fetchUsers);
     
     <!-- Create User Form -->
     <form @submit.prevent="handleCreateUser" class="user-form">
-      <input type="text" v-model="newUser.username" placeholder="Username" required />
+      <input type="text" v-model="newUser.name" placeholder="Name" required />
       <input type="email" v-model="newUser.email" placeholder="Email" required />
       <button type="submit">Create User</button>
     </form>
@@ -63,7 +63,7 @@ onMounted(fetchUsers);
     <!-- Users List -->
     <ul v-if="!isLoading && users.length">
       <li v-for="user in users" :key="user.id">
-        <span>{{ user.username }} ({{ user.email }})</span>
+        <span>{{ user.name }} ({{ user.email }})</span>
         <button @click="handleDeleteUser(user.id)" class="delete-btn">Delete</button>
       </li>
     </ul>
