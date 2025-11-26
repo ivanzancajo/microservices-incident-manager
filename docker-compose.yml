@@ -125,6 +125,22 @@ services:
     networks:
       - app-network
 
+  # 3. Servicio Frontend (Vue + Nginx)
+  frontend:
+    build:
+      context: ./frontend
+      args: # Pasa la variable VITE_API_URL al Dockerfile durante el build
+        - VITE_API_URL=${VITE_API_URL}
+    env_file:
+      - .env # Nginx no usa esto, pero es bueno tenerlo
+    ports:
+      - "5173:80" # <-- ESTE ES EL ÚNICO PUERTO EXPUESTO
+    depends_on:
+      - gateway # Se asegura de que la API esté (al menos) iniciada
+    networks:
+      - app-network
+
+
 volumes:
   users_data: {}
   incidents_data: {}
