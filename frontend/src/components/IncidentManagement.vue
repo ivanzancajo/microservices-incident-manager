@@ -23,7 +23,7 @@ const incidentStatusDisplay = {
 const selectedUserName = computed(() => {
   if (newIncident.value.user_id) {
     const user = users.value.find(u => u.id === newIncident.value.user_id);
-    return user ? user.name : 'Selecciona un usuario';
+    return user ? `${user.name} (${user.email})` : 'Selecciona un usuario';
   }
   return 'Selecciona un usuario';
 });
@@ -197,7 +197,7 @@ onMounted(() => {
           <div v-if="userDropdownOpen" class="dropdown-menu-form">
             <a v-if="users.length === 0" href="#" class="dropdown-item disabled">No hay usuarios registrados</a>
             <a v-for="user in users" :key="user.id" href="#" @click.prevent="selectUser(user.id)" class="dropdown-item">
-              {{ user.name }}
+              {{ user.name }} ({{ user.email }})
             </a>
           </div>
         </div>
