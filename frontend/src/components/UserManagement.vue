@@ -166,7 +166,7 @@ input[type="email"]:focus {
 }
 
 .btn-primary {
-  background-color: var(--primary-color);
+  background-color: rgb(250, 250, 250);
   color: #434190;
   display: block;
   margin: 1rem auto 0;
@@ -218,15 +218,15 @@ input[type="email"]:focus {
 }
 
 .btn-danger {
-  background-color: var(--danger-color);
-  color: white;
+  background-color: rgb(250, 250, 250);
+  color: var(--danger-color);
   
   
   width: auto;
 }
 
 .btn-danger:hover {
-  background-color: #c53030;
+  background-color: var(--danger-color);
   color: white;
   transform: translateY(-2px);
 }

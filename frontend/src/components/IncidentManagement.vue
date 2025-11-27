@@ -4,11 +4,12 @@ import { getIncidents, createIncident, updateIncident, deleteIncident, getUsers 
 
 const incidents = ref([]);
 const users = ref([]);
-const newIncident = ref({ title: '', description: '', user_id: null });
+const newIncident = ref({ title: '', description: '', user_id: null, status: null });
 const error = ref(null);
 const isLoading = ref(true);
 const statusDropdownOpen = ref(null);
 const userDropdownOpen = ref(false);
+const newStatusDropdownOpen = ref(false);
 
 const incidentStatusEnum = ['abierta', 'en_progreso', 'cerrada'];
 
@@ -24,6 +25,13 @@ const selectedUserName = computed(() => {
     return user ? user.name : 'Selecciona un usuario';
   }
   return 'Selecciona un usuario';
+});
+
+const selectedStatusName = computed(() => {
+  if (newIncident.value.status) {
+    return incidentStatusDisplay[newIncident.value.status];
+  }
+  return 'Estado';
 });
 
 const fetchIncidents = async () => {
@@ -47,14 +55,14 @@ const fetchUsers = async () => {
 };
 
 const handleCreateIncident = async () => {
-  if (!newIncident.value.title || !newIncident.value.user_id) {
-    error.value = 'El título y el usuario son obligatorios.';
+  if (!newIncident.value.title || !newIncident.value.user_id || !newIncident.value.status) {
+    error.value = 'El título, el usuario y el estado son obligatorios.';
     return;
   }
 
   try {
     await createIncident({ ...newIncident.value });
-    newIncident.value = { title: '', description: '', user_id: null };
+    newIncident.value = { title: '', description: '', user_id: null, status: null };
     await fetchIncidents();
   } catch (err) {
     error.value = `Error al crear la incidencia: ${err.message}`;
@@ -98,6 +106,16 @@ const selectUser = (userId) => {
   userDropdownOpen.value = false;
 };
 
+const toggleNewStatusDropdown = () => {
+  newStatusDropdownOpen.value = !newStatusDropdownOpen.value;
+};
+
+const selectNewStatus = (status) => {
+  newIncident.value.status = status;
+  newStatusDropdownOpen.value = false;
+};
+
+
 const getStatusClass = (status) => {
   return `status-${status.replace('_', '-')}`;
 };
@@ -124,8 +142,23 @@ onMounted(() => {
         <input type="text" v-model="newIncident.description" placeholder="Descripción" />
       </div>
       <div class="form-group">
+        <label for="status-dropdown" class="sr-only">Estado</label>
         <div class="custom-dropdown">
-          <button @click.prevent="toggleUserDropdown" class="dropdown-toggle">
+          <button id="status-dropdown" @click.prevent="toggleNewStatusDropdown" :class="['dropdown-toggle', { 'placeholder-style': !newIncident.status }]">
+            {{ selectedStatusName }}
+            <i class="fas fa-chevron-down"></i>
+          </button>
+          <div v-if="newStatusDropdownOpen" class="dropdown-menu-form">
+            <a v-for="status in incidentStatusEnum" :key="status" href="#" @click.prevent="selectNewStatus(status)" class="dropdown-item">
+              {{ incidentStatusDisplay[status] }}
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="user-dropdown" class="sr-only">Usuario</label>
+        <div class="custom-dropdown">
+          <button id="user-dropdown" @click.prevent="toggleUserDropdown" :class="['dropdown-toggle', { 'placeholder-style': !newIncident.user_id }]">
             {{ selectedUserName }}
             <i class="fas fa-chevron-down"></i>
           </button>
@@ -181,6 +214,18 @@ onMounted(() => {
   --text-color: #2d3748;
   --light-gray: #e2e8f0;
   --dark-gray: #718096;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }
 
 .incident-management-container {
@@ -264,8 +309,8 @@ select:focus {
 }
 
 .btn-primary {
-  background-color: var(--primary-color);
-  color: #434190;
+  background-color:  rgb(250, 250, 250);
+  color:  #434190;
   display: block;
   margin: 1rem auto 0;
   width: 50%;
@@ -296,7 +341,7 @@ select:focus {
 }
 
 .incident-card:hover {
-  transform: translateY(-3px);
+  transform: translateY(-1px);
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
@@ -338,7 +383,6 @@ select:focus {
   font-size: 0.9rem;
   font-weight: 500;
   transition: all 0.3s ease;
-  text-transform: uppercase;
   width: 100%;
 }
 
@@ -346,13 +390,19 @@ select:focus {
   background-color: white;
   border: 1px solid var(--light-gray);
   font-size: 1rem;
-  text-transform: uppercase;
+}
+
+.placeholder-style {
+  color: var(--dark-gray);
 }
 
 .dropdown-toggle:focus {
-  outline: none;
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(90, 103, 216, 0.3);
+}
+
+.dropdown-toggle:hover {
+  background-color: var(--light-gray);
+  color: var(--text-color);
 }
 
 .status-button .fa-chevron-down, .dropdown-toggle .fa-chevron-down {
@@ -361,17 +411,17 @@ select:focus {
 
 .status-abierta {
   background-color: #fefcbf;
-  color: #92400e;
+  color: #a44a12;
 }
 
 .status-en-curso {
-  background-color: #dbeafe;
-  color: #1e40af;
+  background-color: #6b7d96;
+  color: #334993;
 }
 
 .status-cerrada {
-  background-color: #d1fae5;
-  color: #065f46;
+  background-color: #ffada9;
+  color: #3c0606;
 }
 
 .dropdown-menu, .dropdown-menu-form {
@@ -397,7 +447,7 @@ select:focus {
   text-decoration: none;
   cursor: pointer;
   transition: background-color 0.2s;
-  text-transform: uppercase;
+  /*text-transform: uppercase;*/
 }
 
 .dropdown-menu a:hover, .dropdown-menu-form a:hover {
@@ -412,13 +462,14 @@ select:focus {
 
 
 .btn-danger {
-  background-color: var(--danger-color);
-  color: white;
+  background-color: rgb(250, 250, 250);
+  color: var(--danger-color);
   width: auto;
 }
 
 .btn-danger:hover {
-  background-color: #c53030;
+  background-color: var(--danger-color);
+  color: white;
   transform: translateY(-2px);
 }
 
