@@ -159,14 +159,17 @@ input[type="email"]:focus {
   cursor: pointer;
   font-size: 1rem;
   font-weight: 500;
-  width: 100%;
+  /* width: 100%; removed */
   transition: all 0.3s ease;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
 }
 
 .btn-primary {
   background-color: var(--primary-color);
-  color: var(--text-color);
+  color: #434190;
+  display: block;
+  margin: 1rem auto 0;
+  width: 50%;
 }
 
 .btn-primary:hover {
@@ -215,7 +218,9 @@ input[type="email"]:focus {
 
 .btn-danger {
   background-color: var(--danger-color);
-  color: var(--text-color);
+  color: #c53030;
+  
+  
   width: auto;
 }
 
