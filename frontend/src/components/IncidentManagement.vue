@@ -1,8 +1,9 @@
 <script setup>
 import { ref, onMounted } from 'vue';
-import { getIncidents, createIncident, updateIncident, deleteIncident } from '../api';
+import { getIncidents, createIncident, updateIncident, deleteIncident, getUsers } from '../api';
 
 const incidents = ref([]);
+const users = ref([]);
 const newIncident = ref({ title: '', description: '', user_id: null });
 const editingIncident = ref(null);
 const error = ref(null);
@@ -22,11 +23,20 @@ const fetchIncidents = async () => {
   }
 };
 
+const fetchUsers = async () => {
+  try {
+    users.value = await getUsers();
+  } catch (err) {
+    error.value = `Error loading users: ${err.message}`;
+  }
+};
+
 const handleCreateIncident = async () => {
   if (!newIncident.value.title || !newIncident.value.user_id) {
-    error.value = 'Title and User ID are required.';
+    error.value = 'Title and User are required.';
     return;
   }
+
   try {
     await createIncident({ ...newIncident.value });
     newIncident.value = { title: '', description: '', user_id: null };
@@ -55,7 +65,15 @@ const handleDeleteIncident = async (incidentId) => {
   }
 };
 
-onMounted(fetchIncidents);
+const getUserName = (userId) => {
+  const user = users.value.find(u => u.id === userId);
+  return user ? user.name : 'Unknown';
+};
+
+onMounted(() => {
+  fetchIncidents();
+  fetchUsers();
+});
 </script>
 
 <template>
@@ -66,7 +84,13 @@ onMounted(fetchIncidents);
     <form @submit.prevent="handleCreateIncident" class="incident-form">
       <input type="text" v-model="newIncident.title" placeholder="Title" required />
       <input type="text" v-model="newIncident.description" placeholder="Description" />
-      <input type="number" v-model.number="newIncident.user_id" placeholder="User ID" required />
+      <select v-model="newIncident.user_id" required>
+        <option :value="null" disabled>Select a user</option>
+        <option v-if="users.length === 0" :value="null" disabled>No hay usuarios registrados</option>
+        <option v-for="user in users" :key="user.id" :value="user.id">
+          {{ user.name }}
+        </option>
+      </select>
       <button type="submit">Create Incident</button>
     </form>
 
@@ -76,7 +100,7 @@ onMounted(fetchIncidents);
     <ul v-if="!isLoading && incidents.length">
       <li v-for="incident in incidents" :key="incident.id">
         <div class="incident-details">
-          <strong>{{ incident.title }}</strong> (User ID: {{ incident.user_id }})
+          <strong>{{ incident.title }}</strong> (User: {{ getUserName(incident.user_id) }})
           <p>{{ incident.description }}</p>
         </div>
         <div class="incident-actions">
