@@ -13,7 +13,7 @@ const fetchUsers = async () => {
     users.value = await getUsers();
     error.value = null;
   } catch (err) {
-    error.value = `Error loading users: ${err.message}`;
+    error.value = `Error al cargar los usuarios: ${err.message}`;
   } finally {
     isLoading.value = false;
   }
@@ -21,7 +21,7 @@ const fetchUsers = async () => {
 
 const handleCreateUser = async () => {
   if (!newUser.value.name || !newUser.value.email) {
-    error.value = 'Name and email are required.';
+    error.value = 'El nombre y el correo electrónico son obligatorios.';
     return;
   }
   try {
@@ -29,7 +29,7 @@ const handleCreateUser = async () => {
     newUser.value = { name: '', email: '' }; // Reset form
     await fetchUsers(); // Refresh list
   } catch (err) {
-    error.value = `Error creating user: ${err.message}`;
+    error.value = `Error al crear el usuario: ${err.message}`;
   }
 };
 
@@ -38,7 +38,7 @@ const handleDeleteUser = async (userId) => {
     await deleteUser(userId);
     await fetchUsers(); // Refresh list
   } catch (err) {
-    error.value = `Error deleting user: ${err.message}`;
+    error.value = `Error al eliminar el usuario: ${err.message}`;
   }
 };
 
@@ -48,22 +48,22 @@ onMounted(fetchUsers);
 <template>
   <div class="user-management-container">
     <header>
-      <h1>User Management</h1>
+      <h1>Gestión de Usuarios</h1>
     </header>
 
     <!-- Create User Form -->
     <form @submit.prevent="handleCreateUser" class="user-form">
-      <h3>Add New User</h3>
+      <h3>Añadir Nuevo Usuario</h3>
       <div class="form-group">
-        <input type="text" v-model="newUser.name" placeholder="Full Name" required />
+        <input type="text" v-model="newUser.name" placeholder="Nombre Completo" required />
       </div>
       <div class="form-group">
-        <input type="email" v-model="newUser.email" placeholder="Email Address" required />
+        <input type="email" v-model="newUser.email" placeholder="Correo Electrónico" required />
       </div>
-      <button type="submit" class="btn-primary">Add User</button>
+      <button type="submit" class="btn-primary">Añadir Usuario</button>
     </form>
 
-    <div v-if="isLoading" class="loading">Loading users...</div>
+    <div v-if="isLoading" class="loading">Cargando usuarios...</div>
     <div v-if="error" class="error">{{ error }}</div>
 
     <div class="user-list" v-if="!isLoading && users.length">
@@ -72,10 +72,10 @@ onMounted(fetchUsers);
           <strong class="user-name">{{ user.name }}</strong>
           <span class="user-email">{{ user.email }}</span>
         </div>
-        <button @click="handleDeleteUser(user.id)" class="btn-danger">Delete</button>
+        <button @click="handleDeleteUser(user.id)" class="btn-danger">Eliminar</button>
       </div>
     </div>
-    <p v-if="!isLoading && !users.length" class="no-users">No users found. Add one to get started!</p>
+    <p v-if="!isLoading && !users.length" class="no-users">No se encontraron usuarios. ¡Añade uno para empezar!</p>
   </div>
 </template>
 
@@ -162,6 +162,7 @@ input[type="email"]:focus {
   /* width: 100%; removed */
   transition: all 0.3s ease;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  text-transform: uppercase;
 }
 
 .btn-primary {
@@ -218,7 +219,7 @@ input[type="email"]:focus {
 
 .btn-danger {
   background-color: var(--danger-color);
-  color: #c53030;
+  color: white;
   
   
   width: auto;

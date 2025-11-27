@@ -3,7 +3,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 // Helper for handling fetch responses
 const handleResponse = async (response) => {
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Network response was not ok' }));
+    const error = await response.json().catch(() => ({ message: 'La respuesta de la red no fue correcta' }));
     throw new Error(error.detail || error.message);
   }
   // For 204 No Content, there's no body to parse

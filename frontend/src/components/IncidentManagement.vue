@@ -1,15 +1,30 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { getIncidents, createIncident, updateIncident, deleteIncident, getUsers } from '../api';
 
 const incidents = ref([]);
 const users = ref([]);
 const newIncident = ref({ title: '', description: '', user_id: null });
-const editingIncident = ref(null);
 const error = ref(null);
 const isLoading = ref(true);
+const statusDropdownOpen = ref(null);
+const userDropdownOpen = ref(false);
 
 const incidentStatusEnum = ['abierta', 'en_progreso', 'cerrada'];
+
+const incidentStatusDisplay = {
+  'abierta': 'Abierta',
+  'en_progreso': 'En curso',
+  'cerrada': 'Cerrada'
+};
+
+const selectedUserName = computed(() => {
+  if (newIncident.value.user_id) {
+    const user = users.value.find(u => u.id === newIncident.value.user_id);
+    return user ? user.name : 'Selecciona un usuario';
+  }
+  return 'Selecciona un usuario';
+});
 
 const fetchIncidents = async () => {
   try {
@@ -17,7 +32,7 @@ const fetchIncidents = async () => {
     incidents.value = await getIncidents();
     error.value = null;
   } catch (err) {
-    error.value = `Error loading incidents: ${err.message}`;
+    error.value = `Error al cargar las incidencias: ${err.message}`;
   } finally {
     isLoading.value = false;
   }
@@ -27,13 +42,13 @@ const fetchUsers = async () => {
   try {
     users.value = await getUsers();
   } catch (err) {
-    error.value = `Error loading users: ${err.message}`;
+    error.value = `Error al cargar los usuarios: ${err.message}`;
   }
 };
 
 const handleCreateIncident = async () => {
   if (!newIncident.value.title || !newIncident.value.user_id) {
-    error.value = 'Title and User are required.';
+    error.value = 'El título y el usuario son obligatorios.';
     return;
   }
 
@@ -42,17 +57,17 @@ const handleCreateIncident = async () => {
     newIncident.value = { title: '', description: '', user_id: null };
     await fetchIncidents();
   } catch (err) {
-    error.value = `Error creating incident: ${err.message}`;
+    error.value = `Error al crear la incidencia: ${err.message}`;
   }
 };
 
-const handleUpdateIncident = async (incident) => {
+const handleUpdateIncident = async (incident, newStatus) => {
   try {
-    await updateIncident(incident.id, { status: incident.status });
-    editingIncident.value = null; // Exit edit mode
+    await updateIncident(incident.id, { status: newStatus });
+    statusDropdownOpen.value = null; // Close dropdown
     await fetchIncidents();
   } catch (err) {
-    error.value = `Error updating incident: ${err.message}`;
+    error.value = `Error al actualizar la incidencia: ${err.message}`;
   }
 };
 
@@ -61,13 +76,30 @@ const handleDeleteIncident = async (incidentId) => {
     await deleteIncident(incidentId);
     await fetchIncidents();
   } catch (err) {
-    error.value = `Error deleting incident: ${err.message}`;
+    error.value = `Error al eliminar la incidencia: ${err.message}`;
   }
 };
 
 const getUserName = (userId) => {
   const user = users.value.find(u => u.id === userId);
-  return user ? user.name : 'Unknown';
+  return user ? user.name : 'Desconocido';
+};
+
+const toggleStatusDropdown = (incidentId) => {
+  statusDropdownOpen.value = statusDropdownOpen.value === incidentId ? null : incidentId;
+};
+
+const toggleUserDropdown = () => {
+  userDropdownOpen.value = !userDropdownOpen.value;
+};
+
+const selectUser = (userId) => {
+  newIncident.value.user_id = userId;
+  userDropdownOpen.value = false;
+};
+
+const getStatusClass = (status) => {
+  return `status-${status.replace('_', '-')}`;
 };
 
 onMounted(() => {
@@ -77,48 +109,69 @@ onMounted(() => {
 </script>
 
 <template>
-  <div>
-    <h2>Incident Management</h2>
+  <div class="incident-management-container">
+    <header>
+      <h1>Gestión de Incidencias</h1>
+    </header>
 
     <!-- Create Incident Form -->
     <form @submit.prevent="handleCreateIncident" class="incident-form">
-      <input type="text" v-model="newIncident.title" placeholder="Title" required />
-      <input type="text" v-model="newIncident.description" placeholder="Description" />
-      <select v-model="newIncident.user_id" required>
-        <option :value="null" disabled>Select a user</option>
-        <option v-if="users.length === 0" :value="null" disabled>No hay usuarios registrados</option>
-        <option v-for="user in users" :key="user.id" :value="user.id">
-          {{ user.name }}
-        </option>
-      </select>
-      <button type="submit" class="btn-primary">Create Incident</button>
+      <h3>Añadir Nueva Incidencia</h3>
+      <div class="form-group">
+        <input type="text" v-model="newIncident.title" placeholder="Título" required />
+      </div>
+      <div class="form-group">
+        <input type="text" v-model="newIncident.description" placeholder="Descripción" />
+      </div>
+      <div class="form-group">
+        <div class="custom-dropdown">
+          <button @click.prevent="toggleUserDropdown" class="dropdown-toggle">
+            {{ selectedUserName }}
+            <i class="fas fa-chevron-down"></i>
+          </button>
+          <div v-if="userDropdownOpen" class="dropdown-menu-form">
+            <a v-if="users.length === 0" href="#" class="dropdown-item disabled">No hay usuarios registrados</a>
+            <a v-for="user in users" :key="user.id" href="#" @click.prevent="selectUser(user.id)" class="dropdown-item">
+              {{ user.name }}
+            </a>
+          </div>
+        </div>
+      </div>
+      <button type="submit" class="btn-primary">Crear Incidencia</button>
     </form>
 
-    <div v-if="isLoading">Loading incidents...</div>
+    <div v-if="isLoading" class="loading">Cargando incidencias...</div>
     <div v-if="error" class="error">{{ error }}</div>
 
-    <ul v-if="!isLoading && incidents.length">
-      <li v-for="incident in incidents" :key="incident.id">
-        <div class="incident-details">
-          <strong>{{ incident.title }}</strong> (User: {{ getUserName(incident.user_id) }})
-          <p>{{ incident.description }}</p>
+    <div class="incident-list" v-if="!isLoading && incidents.length">
+      <div v-for="incident in incidents" :key="incident.id" class="incident-card">
+        <div class="incident-info">
+          <strong class="incident-title">{{ incident.title }}</strong>
+          <span class="user-name">Asignado a: {{ getUserName(incident.user_id) }}</span>
+          <p class="incident-description">{{ incident.description }}</p>
         </div>
         <div class="incident-actions">
-          <select v-model="incident.status" @change="handleUpdateIncident(incident)">
-            <option v-for="status in incidentStatusEnum" :value="status" :key="status">
-              {{ status }}
-            </option>
-          </select>
-          <button @click="handleDeleteIncident(incident.id)" class="btn-danger">Delete</button>
+          <div class="status-dropdown">
+            <button @click="toggleStatusDropdown(incident.id)" :class="['status-button', getStatusClass(incident.status)]">
+              {{ incidentStatusDisplay[incident.status] }}
+              <i class="fas fa-chevron-down"></i>
+            </button>
+            <div v-if="statusDropdownOpen === incident.id" class="dropdown-menu">
+              <a v-for="status in incidentStatusEnum" :key="status" @click.prevent="handleUpdateIncident(incident, status)">
+                {{ incidentStatusDisplay[status] }}
+              </a>
+            </div>
+          </div>
+          <button @click="handleDeleteIncident(incident.id)" class="btn-danger">Eliminar</button>
         </div>
-      </li>
-    </ul>
-    <p v-if="!isLoading && !incidents.length">No incidents found.</p>
+      </div>
+    </div>
+    <p v-if="!isLoading && !incidents.length" class="no-incidents">No se encontraron incidencias. ¡Añade una para empezar!</p>
   </div>
 </template>
-
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap');
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css');
 
 :root {
   --primary-color: #5a67d8;
@@ -191,7 +244,6 @@ select {
   padding-right: 2.5rem;
 }
 
-
 input[type="text"]:focus,
 select:focus {
   outline: none;
@@ -206,83 +258,158 @@ select:focus {
   cursor: pointer;
   font-size: 1rem;
   font-weight: 500;
-  width: 100%;
   transition: all 0.3s ease;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  text-transform: uppercase;
 }
 
 .btn-primary {
   background-color: var(--primary-color);
-  color: var(--text-color);
+  color: #434190;
+  display: block;
+  margin: 1rem auto 0;
+  width: 50%;
 }
 
 .btn-primary:hover {
   background-color: #434190;
-  color:white;
+  color: white;
   transform: translateY(-2px);
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, .1), 0 4px 6px -2px rgba(0, 0, 0, .05);
 }
 
 .incident-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: 1fr;
+  gap: 1rem;
 }
 
 .incident-card {
   background-color: var(--card-background);
   border-radius: 12px;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   display: flex;
-  flex-direction: column;
   justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
   transition: transform 0.3s, box-shadow 0.3s;
 }
 
 .incident-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
-.card-header, .card-body, .card-footer {
-  padding: 1.5rem;
-}
-
-.card-header {
-  border-bottom: 1px solid var(--light-gray);
-}
-
-.card-header h3 {
-  margin: 0;
-  font-weight: 500;
-  font-size: 1.25rem;
-}
-
-.user-info {
-  font-size: 0.9rem;
-  color: var(--dark-gray);
-  margin-top: 0.25rem;
-  display: block;
-}
-
-.card-body p {
-  color: var(--dark-gray);
-  margin: 0;
-}
-
-.card-footer {
+.incident-info {
   display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.incident-title {
+  font-weight: 500;
+  font-size: 1.1rem;
+}
+
+.user-name, .incident-description {
+  color: var(--dark-gray);
+  font-size: 0.9rem;
+}
+
+.incident-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.status-dropdown, .custom-dropdown {
+  position: relative;
+}
+
+.status-button, .dropdown-toggle {
+  display: inline-flex;
   justify-content: space-between;
   align-items: center;
-  border-top: 1px solid var(--light-gray);
-  background-color: #fdfdff;
-  border-radius: 0 0 12px 12px;
+  gap: 0.5rem;
+  border: none;
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  width: 100%;
 }
 
-.status-select {
-  width: auto;
-  font-size: 0.9rem;
+.dropdown-toggle {
+  background-color: white;
+  border: 1px solid var(--light-gray);
+  font-size: 1rem;
+  text-transform: uppercase;
 }
+
+.dropdown-toggle:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(90, 103, 216, 0.3);
+}
+
+.status-button .fa-chevron-down, .dropdown-toggle .fa-chevron-down {
+  transition: transform 0.2s;
+}
+
+.status-abierta {
+  background-color: #fefcbf;
+  color: #92400e;
+}
+
+.status-en-curso {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.status-cerrada {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.dropdown-menu, .dropdown-menu-form {
+  position: absolute;
+  top: calc(100% + 5px);
+  right: 0;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+  overflow: hidden;
+  z-index: 10;
+  width: max-content;
+}
+
+.dropdown-menu-form {
+  width: 100%;
+}
+
+.dropdown-menu a, .dropdown-menu-form a {
+  display: block;
+  padding: 0.75rem 1.5rem;
+  color: var(--text-color);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  text-transform: uppercase;
+}
+
+.dropdown-menu a:hover, .dropdown-menu-form a:hover {
+  background-color: var(--light-gray);
+}
+
+.dropdown-item.disabled {
+  color: var(--dark-gray);
+  cursor: default;
+  background-color: transparent;
+}
+
 
 .btn-danger {
   background-color: var(--danger-color);
