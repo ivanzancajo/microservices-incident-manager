@@ -222,6 +222,7 @@ onMounted(() => {
       </div>
     </form>
 
+    <h2 class="list-title">Lista de Incidencias</h2>
     <div v-if="isLoading" class="loading">Cargando incidencias...</div>
     <div v-if="error" class="error">{{ error }}</div>
 
@@ -315,6 +316,14 @@ header h1 {
 
 .incident-form h3 {
   margin-top: 0;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  font-weight: 500;
+  font-size: 1.5rem;
+}
+
+.list-title {
+  margin-top: 2.5rem;
   margin-bottom: 1.5rem;
   text-align: center;
   font-weight: 500;
