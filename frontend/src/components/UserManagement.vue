@@ -46,62 +46,196 @@ onMounted(fetchUsers);
 </script>
 
 <template>
-  <div>
-    <h2>User Management</h2>
-    
+  <div class="user-management-container">
+    <header>
+      <h1>User Management</h1>
+    </header>
+
     <!-- Create User Form -->
     <form @submit.prevent="handleCreateUser" class="user-form">
-      <input type="text" v-model="newUser.name" placeholder="Name" required />
-      <input type="email" v-model="newUser.email" placeholder="Email" required />
-      <button type="submit">Create User</button>
+      <h3>Add New User</h3>
+      <div class="form-group">
+        <input type="text" v-model="newUser.name" placeholder="Full Name" required />
+      </div>
+      <div class="form-group">
+        <input type="email" v-model="newUser.email" placeholder="Email Address" required />
+      </div>
+      <button type="submit" class="btn-primary">Add User</button>
     </form>
 
-    <!-- Loading and Error Messages -->
-    <div v-if="isLoading">Loading users...</div>
+    <div v-if="isLoading" class="loading">Loading users...</div>
     <div v-if="error" class="error">{{ error }}</div>
 
-    <!-- Users List -->
-    <ul v-if="!isLoading && users.length">
-      <li v-for="user in users" :key="user.id">
-        <span>{{ user.name }} ({{ user.email }})</span>
-        <button @click="handleDeleteUser(user.id)" class="delete-btn">Delete</button>
-      </li>
-    </ul>
-    <p v-if="!isLoading && !users.length">No users found.</p>
+    <div class="user-list" v-if="!isLoading && users.length">
+      <div v-for="user in users" :key="user.id" class="user-card">
+        <div class="user-info">
+          <strong class="user-name">{{ user.name }}</strong>
+          <span class="user-email">{{ user.email }}</span>
+        </div>
+        <button @click="handleDeleteUser(user.id)" class="btn-danger">Delete</button>
+      </div>
+    </div>
+    <p v-if="!isLoading && !users.length" class="no-users">No users found. Add one to get started!</p>
   </div>
 </template>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap');
+
+:root {
+  --primary-color: #5a67d8;
+  --danger-color: #e53e3e;
+  --background-color: #f7fafc;
+  --card-background: #ffffff;
+  --text-color: #2d3748;
+  --light-gray: #e2e8f0;
+  --dark-gray: #718096;
+}
+
+.user-management-container {
+  font-family: 'Poppins', sans-serif;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  background-color: var(--background-color);
+  color: var(--text-color);
+}
+
+header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+header h1 {
+  font-weight: 600;
+  font-size: 2.5rem;
+}
+
 .user-form {
-  margin-bottom: 1rem;
-  display: flex;
-  gap: 0.5rem;
+  background-color: var(--card-background);
+  padding: 2.5rem;
+  border-radius: 12px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  margin-bottom: 2.5rem;
 }
 
-ul {
-  list-style: none;
-  padding: 0;
+.user-form h3 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  font-weight: 500;
+  font-size: 1.5rem;
 }
 
-li {
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+input[type="text"],
+input[type="email"] {
+  width: 100%;
+  padding: 1rem;
+  border: 1px solid var(--light-gray);
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: box-shadow 0.2s, border-color 0.2s;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-color: white;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(90, 103, 216, 0.3);
+}
+
+.btn-primary, .btn-danger {
+  border: none;
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+  width: 100%;
+  transition: all 0.3s ease;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+.btn-primary {
+  background-color: var(--primary-color);
+  color: var(--text-color);
+}
+
+.btn-primary:hover {
+  background-color: #434190;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, .1), 0 4px 6px -2px rgba(0, 0, 0, .05);
+}
+
+.user-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+.user-card {
+  background-color: var(--card-background);
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.5rem;
-  border-bottom: 1px solid #eee;
+  padding: 1.5rem;
+  transition: transform 0.3s, box-shadow 0.3s;
 }
 
-.delete-btn {
-  background-color: #ff4d4d;
+.user-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-name {
+  font-weight: 500;
+  font-size: 1.1rem;
+}
+
+.user-email {
+  color: var(--dark-gray);
+  font-size: 0.9rem;
+}
+
+.btn-danger {
+  background-color: var(--danger-color);
+  color: var(--text-color);
+  width: auto;
+}
+
+.btn-danger:hover {
+  background-color: #c53030;
   color: white;
-  border: none;
-  padding: 0.3rem 0.6rem;
-  border-radius: 4px;
-  cursor: pointer;
+  transform: translateY(-2px);
+}
+
+.loading, .no-users, .error {
+  text-align: center;
+  padding: 3rem;
+  font-size: 1.2rem;
+  color: var(--dark-gray);
 }
 
 .error {
-  color: red;
-  margin-bottom: 1rem;
+  color: var(--danger-color);
+  background-color: #fed7d7;
+  border: 1px solid var(--danger-color);
+  border-radius: 8px;
 }
 </style>
