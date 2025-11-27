@@ -16,7 +16,7 @@ const incidentStatusEnum = ['abierta', 'en_progreso', 'cerrada'];
 
 const incidentStatusDisplay = {
   'abierta': 'Abierta',
-  'en_progreso': 'En curso',
+  'en_progreso': 'En progreso',
   'cerrada': 'Cerrada'
 };
 
@@ -35,10 +35,18 @@ const selectedStatusName = computed(() => {
   return 'Estado';
 });
 
+const statusOrder = {
+  'abierta': 1,
+  'en_progreso': 2,
+  'cerrada': 3,
+};
+
 const fetchIncidents = async () => {
   try {
     isLoading.value = true;
-    incidents.value = await getIncidents();
+    const fetchedIncidents = await getIncidents();
+    fetchedIncidents.sort((a, b) => statusOrder[a.status] - statusOrder[b.status]);
+    incidents.value = fetchedIncidents;
     error.value = null;
   } catch (err) {
     error.value = `Error al cargar las incidencias: ${err.message}`;
@@ -218,7 +226,7 @@ onMounted(() => {
     <div v-if="error" class="error">{{ error }}</div>
 
     <div class="incident-list" v-if="!isLoading && incidents.length">
-      <div v-for="incident in incidents" :key="incident.id" class="incident-row-wrapper">
+      <div v-for="incident in incidents" :key="incident.id" class="incident-row-wrapper" :class="{ 'is-active': statusDropdownOpen === incident.id }">
         <div class="incident-card">
           <div class="incident-info">
             <strong class="incident-title">{{ incident.title }}</strong>
@@ -401,6 +409,11 @@ select:focus {
   display: flex;
   align-items: center;
   gap: 1rem;
+  position: relative;
+}
+
+.incident-row-wrapper.is-active {
+  z-index: 20;
 }
 
 .incident-card {
@@ -495,19 +508,23 @@ select:focus {
   transition: transform 0.2s;
 }
 
-.status-abierta {
-  background-color: #fefcbf;
-  color: #a44a12;
+.status-button:hover {
+  filter: brightness(95%);
 }
 
-.status-en-curso {
-  background-color: #6b7d96;
-  color: #334993;
+.status-abierta {
+  background-color: #c6f6d5;
+  color: #22543d;
+}
+
+.status-en-progreso {
+  background-color: #bee3f8;
+  color: #2a4365;
 }
 
 .status-cerrada {
-  background-color: #ffada9;
-  color: #3c0606;
+  background-color: #fed7d7;
+  color: #822727;
 }
 
 .dropdown-menu, .dropdown-menu-form {
