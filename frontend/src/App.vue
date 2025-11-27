@@ -9,15 +9,17 @@ const currentView = ref('users'); // 'users' or 'incidents'
 <template>
   <div class="app-container">
     <header class="app-header">
-      <h1 class="app-title">Gestor de Usuarios e Incidencias</h1>
-      <nav class="app-nav">
-        <button @click="currentView = 'users'" :class="['nav-button', { active: currentView === 'users' }]">
-          <i class="fas fa-users"></i> Usuarios
-        </button>
-        <button @click="currentView = 'incidents'" :class="['nav-button', { active: currentView === 'incidents' }]">
-          <i class="fas fa-exclamation-triangle"></i> Incidencias
-        </button>
-      </nav>
+      <div class="header-content">
+        <h1 class="app-title">Gestor de Usuarios e Incidencias</h1>
+        <nav class="app-nav">
+          <button @click="currentView = 'users'" :class="['nav-button', { active: currentView === 'users' }]">
+            <i class="fas fa-users"></i> Usuarios
+          </button>
+          <button @click="currentView = 'incidents'" :class="['nav-button', { active: currentView === 'incidents' }]">
+            <i class="fas fa-exclamation-triangle"></i> Incidencias
+          </button>
+        </nav>
+      </div>
     </header>
 
     <main class="app-main">
@@ -60,13 +62,21 @@ body {
 }
 
 .app-header {
+  background-color: var(--card-background);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  z-index: 10;
+  position: sticky;
+  top: 0;
+  width: 100%;
+}
+
+.header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 1rem 2.5rem;
-  background-color: var(--card-background);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  z-index: 10;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .app-title {
@@ -114,7 +124,11 @@ body {
 
 .app-main {
   flex: 1;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
   padding: 2rem;
+  box-sizing: border-box;
 }
 
 /* Transition effects */

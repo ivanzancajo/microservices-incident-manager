@@ -5,6 +5,7 @@ import { getIncidents, createIncident, updateIncident, deleteIncident, getUsers 
 const incidents = ref([]);
 const users = ref([]);
 const newIncident = ref({ title: '', description: '', user_id: null, status: null });
+const editingIncident = ref(null);
 const error = ref(null);
 const isLoading = ref(true);
 const statusDropdownOpen = ref(null);
@@ -88,6 +89,29 @@ const handleDeleteIncident = async (incidentId) => {
   }
 };
 
+const handleEditClick = (incident) => {
+  editingIncident.value = { ...incident };
+};
+
+const handleSaveChanges = async () => {
+  if (!editingIncident.value) return;
+
+  try {
+    await updateIncident(editingIncident.value.id, {
+      title: editingIncident.value.title,
+      description: editingIncident.value.description,
+    });
+    editingIncident.value = null;
+    await fetchIncidents();
+  } catch (err) {
+    error.value = `Error al guardar los cambios: ${err.message}`;
+  }
+};
+
+const cancelEdit = () => {
+  editingIncident.value = null;
+};
+
 const getUserName = (userId) => {
   const user = users.value.find(u => u.id === userId);
   return user ? user.name : 'Desconocido';
@@ -133,7 +157,7 @@ onMounted(() => {
     </header>
 
     <!-- Create Incident Form -->
-    <form @submit.prevent="handleCreateIncident" class="incident-form">
+    <form @submit.prevent="handleCreateIncident" class="incident-form" v-if="!editingIncident">
       <h3>Añadir Nueva Incidencia</h3>
       <div class="form-group">
         <input type="text" v-model="newIncident.title" placeholder="Título" required />
@@ -173,30 +197,55 @@ onMounted(() => {
       <button type="submit" class="btn-primary">Crear Incidencia</button>
     </form>
 
+    <!-- Edit Incident Form -->
+    <form v-if="editingIncident" @submit.prevent="handleSaveChanges" class="incident-form">
+      <h3>Editar Incidencia</h3>
+      <div class="form-group">
+        <label>Título</label>
+        <input type="text" v-model="editingIncident.title" placeholder="Título" required />
+      </div>
+      <div class="form-group">
+        <label>Descripción</label>
+        <input type="text" v-model="editingIncident.description" placeholder="Descripción" />
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn-primary">Guardar Cambios</button>
+        <button @click="cancelEdit" type="button" class="btn-secondary">Cancelar</button>
+      </div>
+    </form>
+
     <div v-if="isLoading" class="loading">Cargando incidencias...</div>
     <div v-if="error" class="error">{{ error }}</div>
 
     <div class="incident-list" v-if="!isLoading && incidents.length">
-      <div v-for="incident in incidents" :key="incident.id" class="incident-card">
-        <div class="incident-info">
-          <strong class="incident-title">{{ incident.title }}</strong>
-          <span class="user-name">Asignado a: {{ getUserName(incident.user_id) }}</span>
-          <p class="incident-description">{{ incident.description }}</p>
-        </div>
-        <div class="incident-actions">
-          <div class="status-dropdown">
-            <button @click="toggleStatusDropdown(incident.id)" :class="['status-button', getStatusClass(incident.status)]">
-              {{ incidentStatusDisplay[incident.status] }}
-              <i class="fas fa-chevron-down"></i>
-            </button>
-            <div v-if="statusDropdownOpen === incident.id" class="dropdown-menu">
-              <a v-for="status in incidentStatusEnum" :key="status" @click.prevent="handleUpdateIncident(incident, status)">
-                {{ incidentStatusDisplay[status] }}
-              </a>
+      <div v-for="incident in incidents" :key="incident.id" class="incident-row-wrapper">
+        <div class="incident-card">
+          <div class="incident-info">
+            <strong class="incident-title">{{ incident.title }}</strong>
+            <p class="incident-description">{{ incident.description }}</p>
+            <div class="user-assignment">
+              <i class="fas fa-user"></i>
+              <span>{{ getUserName(incident.user_id) }}</span>
             </div>
           </div>
-          <button @click="handleDeleteIncident(incident.id)" class="btn-danger">Eliminar</button>
+          <div class="incident-actions">
+            <div class="status-dropdown">
+              <button @click="toggleStatusDropdown(incident.id)" :class="['status-button', getStatusClass(incident.status)]">
+                {{ incidentStatusDisplay[incident.status] }}
+                <i class="fas fa-chevron-down"></i>
+              </button>
+              <div v-if="statusDropdownOpen === incident.id" class="dropdown-menu">
+                <a v-for="status in incidentStatusEnum" :key="status" @click.prevent="handleUpdateIncident(incident, status)">
+                  {{ incidentStatusDisplay[status] }}
+                </a>
+              </div>
+            </div>
+            <button @click="handleDeleteIncident(incident.id)" class="btn-danger">Eliminar</button>
+          </div>
         </div>
+        <button @click="handleEditClick(incident)" class="btn-edit">
+          <i class="fas fa-pencil-alt"></i>
+        </button>
       </div>
     </div>
     <p v-if="!isLoading && !incidents.length" class="no-incidents">No se encontraron incidencias. ¡Añade una para empezar!</p>
@@ -214,6 +263,7 @@ onMounted(() => {
   --text-color: #2d3748;
   --light-gray: #e2e8f0;
   --dark-gray: #718096;
+  --secondary-color: #a0aec0;
 }
 
 .sr-only {
@@ -267,6 +317,19 @@ header h1 {
   margin-bottom: 1.5rem;
 }
 
+.form-group label {
+  display: block;
+  margin-bottom: .5rem;
+  font-weight: 500;
+}
+
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
 input[type="text"],
 select {
   width: 100%;
@@ -296,7 +359,7 @@ select:focus {
   box-shadow: 0 0 0 3px rgba(90, 103, 216, 0.3);
 }
 
-.btn-primary, .btn-danger {
+.btn-primary, .btn-danger, .btn-edit, .btn-secondary {
   border: none;
   padding: 1rem 1.5rem;
   border-radius: 8px;
@@ -323,9 +386,20 @@ select:focus {
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, .1), 0 4px 6px -2px rgba(0, 0, 0, .05);
 }
 
+.form-actions .btn-primary {
+  width: auto;
+  margin: 0;
+}
+
 .incident-list {
   display: grid;
   grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+.incident-row-wrapper {
+  display: flex;
+  align-items: center;
   gap: 1rem;
 }
 
@@ -338,6 +412,7 @@ select:focus {
   align-items: center;
   padding: 1.5rem;
   transition: transform 0.3s, box-shadow 0.3s;
+  flex-grow: 1;
 }
 
 .incident-card:hover {
@@ -349,6 +424,7 @@ select:focus {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  flex-grow: 1;
 }
 
 .incident-title {
@@ -356,15 +432,25 @@ select:focus {
   font-size: 1.1rem;
 }
 
-.user-name, .incident-description {
+.incident-description {
   color: var(--dark-gray);
   font-size: 0.9rem;
+}
+
+.user-assignment {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--dark-gray);
+  font-size: 0.9rem;
+  margin-top: auto;
 }
 
 .incident-actions {
   display: flex;
   align-items: center;
   gap: 1rem;
+  flex-shrink: 0;
 }
 
 .status-dropdown, .custom-dropdown {
@@ -472,6 +558,36 @@ select:focus {
   color: white;
   transform: translateY(-2px);
 }
+
+.btn-edit {
+  background-color: rgb(250, 250, 250);
+  color: var(--primary-color);
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 8px;
+}
+
+.btn-edit:hover {
+  background-color: var(--primary-color);
+  color: white;
+  transform: translateY(-2px);
+}
+
+.btn-secondary {
+  background-color: rgb(250, 250, 250);
+  color: #718096;
+}
+
+.btn-secondary:hover {
+  background-color: #718096;
+  color: white;
+  transform: translateY(-2px);
+}
+
 
 .loading, .no-incidents, .error {
   text-align: center;
