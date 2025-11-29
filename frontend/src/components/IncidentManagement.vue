@@ -120,11 +120,6 @@ const cancelEdit = () => {
   editingIncident.value = null;
 };
 
-const getUserName = (userId) => {
-  const user = users.value.find(u => u.id === userId);
-  return user ? user.name : 'Desconocido';
-};
-
 const toggleStatusDropdown = (incidentId) => {
   statusDropdownOpen.value = statusDropdownOpen.value === incidentId ? null : incidentId;
 };
@@ -234,7 +229,7 @@ onMounted(() => {
             <p class="incident-description">{{ incident.description }}</p>
             <div class="user-assignment">
               <i class="fas fa-user"></i>
-              <span>{{ getUserName(incident.user_id) }}</span>
+              <span>{{ incident.owner ? incident.owner.name : 'Usuario no encontrado' }}</span>
             </div>
           </div>
           <div class="incident-actions">

@@ -7,8 +7,10 @@ services:
     build: ./gateway
     container_name: api_gateway
     restart: always
+    env_file:
+      - .env
     ports:
-      - "8080:80" # <--- ÚNICO PUERTO ABIERTO AL MUNDO EXTERIOR
+      - "8080:8000" 
     depends_on:
       - users-service
       - incidents-service

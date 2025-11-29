@@ -16,11 +16,11 @@ const handleResponse = async (response) => {
 // --- Users Service ---
 
 export const getUsers = () => {
-  return fetch(`${API_BASE_URL}/users/usuarios`).then(handleResponse);
+  return fetch(`${API_BASE_URL}/users/`).then(handleResponse);
 };
 
 export const createUser = (user) => {
-  return fetch(`${API_BASE_URL}/users/usuarios`, {
+  return fetch(`${API_BASE_URL}/users/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(user),
@@ -28,7 +28,7 @@ export const createUser = (user) => {
 };
 
 export const deleteUser = (userId) => {
-  return fetch(`${API_BASE_URL}/users/usuarios/${userId}`, {
+  return fetch(`${API_BASE_URL}/users/${userId}`, {
     method: 'DELETE',
   }).then(handleResponse);
 };
@@ -37,11 +37,11 @@ export const deleteUser = (userId) => {
 // --- Incidents Service ---
 
 export const getIncidents = () => {
-  return fetch(`${API_BASE_URL}/incidents/incidencias`).then(handleResponse);
+  return fetch(`${API_BASE_URL}/incident-details/`).then(handleResponse);
 };
 
 export const createIncident = (incident) => {
-  return fetch(`${API_BASE_URL}/incidents/incidencias`, {
+  return fetch(`${API_BASE_URL}/incidents/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(incident),
@@ -49,7 +49,7 @@ export const createIncident = (incident) => {
 };
 
 export const updateIncident = (incidentId, incident) => {
-  return fetch(`${API_BASE_URL}/incidents/incidencias/${incidentId}`, {
+  return fetch(`${API_BASE_URL}/incidents/${incidentId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(incident),
@@ -57,7 +57,7 @@ export const updateIncident = (incidentId, incident) => {
 };
 
 export const deleteIncident = (incidentId) => {
-  return fetch(`${API_BASE_URL}/incidents/incidencias/${incidentId}`, {
+  return fetch(`${API_BASE_URL}/incidents/${incidentId}`, {
     method: 'DELETE',
   }).then(handleResponse);
 };

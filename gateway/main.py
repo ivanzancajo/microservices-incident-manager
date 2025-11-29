@@ -9,7 +9,7 @@ app = FastAPI(title="BFF Gateway")
 USERS_SERVICE_URL = os.getenv("USERS_SERVICE_URL")
 INCIDENTS_SERVICE_URL = os.getenv("INCIDENTS_SERVICE_URL")
 
-@app.get("/api/incidencias-detalladas")
+@app.get("/incidencias-detalladas")
 async def get_incidents_with_details():
     async with httpx.AsyncClient() as client:
         # 1. Obtener todas las incidencias
