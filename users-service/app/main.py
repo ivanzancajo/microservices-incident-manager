@@ -44,3 +44,10 @@ def delete_user_endpoint(user_id: int, db: Session = Depends(get_db)):
     crud.delete_user(db, user_id)
     # Nota: Con status_code=204, no se debe retornar contenido en el body.
     return
+
+
+#Endpoint interno para el Gateway.
+#Devuelve los datos completos de los usuarios solicitados por sus IDs.
+@app.post("/usuarios/batch", response_model=list[schemas.UserOut])
+def get_users_batch(user_ids: list[int], db: Session = Depends(get_db)): 
+    return crud.get_users_by_ids(db, user_ids)
