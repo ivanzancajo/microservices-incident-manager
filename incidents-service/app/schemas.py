@@ -15,6 +15,7 @@ class IncidentUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=100)
     description: str | None = Field(default=None, min_length=1, max_length=200)
     status: Optional[StatusEnum] = None
+    user_id: int | None = None
 
 class IncidentOut(IncidentBase):
     id: int

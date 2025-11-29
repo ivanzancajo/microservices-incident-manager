@@ -36,6 +36,9 @@ def update_incident(db: Session, incident_id: int, data: schemas.IncidentUpdate)
         incident.description = data.description
     if data.status is not None:
         incident.status = data.status
+    if data.user_id is not None:
+        incident.user_id = data.user_id
+
     db.commit()
     db.refresh(incident)
     return incident

@@ -108,6 +108,7 @@ const handleSaveChanges = async () => {
     await updateIncident(editingIncident.value.id, {
       title: editingIncident.value.title,
       description: editingIncident.value.description,
+      user_id: editingIncident.value.user_id
     });
     editingIncident.value = null;
     await fetchIncidents();
@@ -146,6 +147,32 @@ const selectNewStatus = (status) => {
 const getStatusClass = (status) => {
   return `status-${status.replace('_', '-')}`;
 };
+
+//Incorporar el usuario al editar incidencia
+const editUserDropdownOpen = ref(false); 
+
+
+const selectedEditUserName = computed(() => {
+  // Verificamos si hay una incidencia en edición y si tiene user_id asignado
+  if (editingIncident.value && editingIncident.value.user_id) {
+    const user = users.value.find(u => u.id === editingIncident.value.user_id);
+    return user ? `${user.name} (${user.email})` : 'Usuario desconocido';
+  }
+  return 'Selecciona un usuario';
+});
+
+// AÑADIR: Funciones para manejar el dropdown de edición
+const toggleEditUserDropdown = () => {
+  editUserDropdownOpen.value = !editUserDropdownOpen.value;
+};
+
+const selectEditUser = (userId) => {
+  // Actualizamos el user_id de la incidencia en edición
+  editingIncident.value.user_id = userId; 
+  editUserDropdownOpen.value = false;
+};
+
+
 
 onMounted(() => {
   fetchIncidents();
@@ -210,6 +237,22 @@ onMounted(() => {
       <div class="form-group">
         <label>Descripción</label>
         <input type="text" v-model="editingIncident.description" placeholder="Descripción" />
+      </div>
+      <div class="form-group">
+        <label>Asignar a Usuario</label>
+        <div class="custom-dropdown">
+          <button @click.prevent="toggleEditUserDropdown" class="dropdown-toggle">
+            {{ selectedEditUserName }}
+            <i class="fas fa-chevron-down"></i>
+          </button>
+          
+          <div v-if="editUserDropdownOpen" class="dropdown-menu-form">
+            <a v-if="users.length === 0" href="#" class="dropdown-item disabled">No hay usuarios disponibles</a>
+            <a v-for="user in users" :key="user.id" href="#" @click.prevent="selectEditUser(user.id)" class="dropdown-item">
+              {{ user.name }} ({{ user.email }})
+            </a>
+          </div>
+        </div>
       </div>
       <div class="form-actions">
         <button type="submit" class="btn-primary">Guardar Cambios</button>
