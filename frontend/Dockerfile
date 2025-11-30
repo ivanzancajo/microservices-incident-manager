@@ -20,7 +20,7 @@ RUN npm install
 COPY . .
 
 # Ejecuta el build
-RUN npm run build-only
+RUN npm run build
 
 # --- Etapa 2: Servir con Nginx ---
 FROM nginx:stable-alpine

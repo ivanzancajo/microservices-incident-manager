@@ -1,118 +1,141 @@
 <script setup>
 import { ref } from 'vue';
-import apiClient from './services/api.js'; 
-import UserList from './components/UserList.vue';
-import UserForm from './components/UserForm.vue';
-import IncidentList from './components/IncidentList.vue';
-import IncidentForm from './components/IncidentForm.vue';
+import UserManagement from './components/UserManagement.vue';
+import IncidentManagement from './components/IncidentManagement.vue';
 
-// --- Lógica de Usuarios ---
-const userListComponent = ref(null);
-const handleUserCreated = () => {
-  if (userListComponent.value) {
-    userListComponent.value.fetchUsers();
-  }
-  if (incidentFormComponent.value) {
-    incidentFormComponent.value.fetchUsersForSelect();
-  }
-};
-
-// --- Lógica de Incidencias ---
-const incidentListComponent = ref(null);
-const incidentFormComponent = ref(null);
-
-// --- NUEVO: Estado para la incidencia en edición ---
-const currentIncidentToEdit = ref(null);
-
-// Esta función se llamará cuando 'IncidentList' emita 'edit-incident'
-const handleEditIncident = (incident) => {
-  currentIncidentToEdit.value = incident;
-};
-
-// Esta función se llamará cuando 'IncidentForm' emita 'incident-saved'
-const handleIncidentSaved = () => {
-  // 1. Reseteamos la incidencia en edición (para que el form se limpie)
-  currentIncidentToEdit.value = null;
-  // 2. Refrescamos la lista de incidencias
-  if (incidentListComponent.value) {
-    incidentListComponent.value.fetchIncidents();
-  }
-};
-
-const handleDeleteUser = async (userId) => {
-  try {
-    // 3. La lógica de API se mueve aquí
-    await apiClient.delete(`/usuarios/${userId}`);
-    
-    // 4. Refrescamos TODAS las listas afectadas
-    if (userListComponent.value) {
-      userListComponent.value.fetchUsers();
-    }
-    if (incidentListComponent.value) {
-      incidentListComponent.value.fetchIncidents();
-    }
-    if (incidentFormComponent.value) {
-      incidentFormComponent.value.fetchUsersForSelect();
-    }
-    
-    alert('Usuario y sus incidencias asociadas eliminados con éxito.');
-
-  } catch (error) {
-    console.error(`Error al eliminar usuario ${userId}:`, error);
-    alert('Error al eliminar el usuario.');
-  }
-};
+const currentView = ref('users'); // 'users' or 'incidents'
 </script>
 
 <template>
-  <header>
-    <h1>Proyecto de Incidencias</h1>
-  </header>
+  <div class="app-container">
+    <header class="app-header">
+      <div class="header-content">
+        <h1 class="app-title">Gestor de Usuarios e Incidencias</h1>
+        <nav class="app-nav">
+          <button @click="currentView = 'users'" :class="['nav-button', { active: currentView === 'users' }]">
+            <i class="fas fa-users"></i> Usuarios
+          </button>
+          <button @click="currentView = 'incidents'" :class="['nav-button', { active: currentView === 'incidents' }]">
+            <i class="fas fa-exclamation-triangle"></i> Incidencias
+          </button>
+        </nav>
+      </div>
+    </header>
 
-  <main>
-    <!-- SECCIÓN DE USUARIOS -->
-    <UserForm @user-created="handleUserCreated" />
-    <hr class="separator" />
-
-    <!-- 5. ESCUCHAMOS EL NUEVO EVENTO EN UserList -->
-    <UserList 
-      ref="userListComponent" 
-      @delete-user="handleDeleteUser" 
-    />
-
-    <hr class="section-divider" />
-
-    <!-- SECCIÓN DE INCIDENCIAS -->
-    <IncidentForm 
-      ref="incidentFormComponent" 
-      :incident-to-edit="currentIncidentToEdit"  
-      @incident-saved="handleIncidentSaved" 
-    />
-    <hr class="separator" />
-    <IncidentList 
-      ref="incidentListComponent"
-      @edit-incident="handleEditIncident"
-    />
-  </main>
+    <main class="app-main">
+      <transition name="fade" mode="out-in">
+        <component :is="currentView === 'users' ? UserManagement : IncidentManagement" />
+      </transition>
+    </main>
+  </div>
 </template>
 
-<style scoped>
-header {
-  background-color: #f0f0f0;
-  padding: 20px;
-  text-align: center;
+<style>
+/* Global Styles */
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap');
+
+:root {
+  --primary-color: #5a67d8;
+  --primary-hover-color: #434190;
+  --danger-color: #e53e3e;
+  --danger-hover-color: #c53030;
+  --background-color: #f7fafc;
+  --card-background: #ffffff;
+  --text-color: #2d3748;
+  --light-gray: #e2e8f0;
+  --dark-gray: #718096;
 }
-main {
-  padding: 20px;
+
+body {
+  font-family: 'Poppins', sans-serif;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  margin: 0;
 }
-.separator {
-  margin: 30px 0;
-  border: 0;
-  border-top: 1px solid #eee;
+
+/* App Layout */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
-.section-divider {
-  margin: 60px 0;
-  border: 0;
-  border-top: 2px solid #005a9c;
+
+.app-header {
+  background-color: var(--card-background);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  z-index: 10;
+  position: sticky;
+  top: 0;
+  width: 100%;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.app-title {
+  color: var(--primary-hover-color);
+  font-size: 1.75rem;
+  font-weight: 600;
+}
+
+.app-nav {
+  display: flex;
+  gap: 1rem;
+}
+
+.nav-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: transparent;
+  border: 2px solid transparent;
+  color: var(--dark-gray);
+  padding: 0.75rem 1.25rem;
+  font-size: 1rem;
+  font-weight: 500;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+.nav-button:hover {
+  color: var(--primary-color);
+  background-color: #eef2ff;
+}
+
+.nav-button.active {
+  color: var(--primary-color);
+  background-color: #eef2ff;
+  border-color: var(--primary-color);
+}
+
+.nav-button .fas {
+  font-size: 1.1em;
+}
+
+.app-main {
+  flex: 1;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  box-sizing: border-box;
+}
+
+/* Transition effects */
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
 }
 </style>

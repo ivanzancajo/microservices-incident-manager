@@ -1,50 +1,147 @@
 services:
-  # 1. Servicio de Base de Datos (PostgreSQL)
-  db:
+
+  # =================================================================
+  # 🚪 API GATEWAY (Único Punto de Acceso Público)
+  # =================================================================
+  gateway:
+    build: ./gateway
+    container_name: api_gateway
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "8080:8000" # Acceso a Docs del Gateway
+    depends_on:
+      - users-service
+      - incidents-service
+    networks:
+      - app-network
+      
+  # -----------------------------------------------------------------
+  # 👤 ECOSYSTEM: USERS
+  # -----------------------------------------------------------------
+  
+  users-db:
     image: postgres:15-alpine
-    # ports: [...] <-- ELIMINADO. La BD no debe ser visible desde fuera.
+    container_name: users_db_container
+    restart: always
     env_file:
       - .env
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${USERS_DB_USER}
+      POSTGRES_PASSWORD: ${USERS_DB_PASSWORD}
+      POSTGRES_DB: ${USERS_DB_NAME}
     volumes:
-      - dbdata:/var/lib/postgresql/data
+      - users_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "psql -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "psql -U ${USERS_DB_USER} -d ${USERS_DB_NAME}"]
       interval: 5s
       timeout: 3s
       retries: 10
       start_period: 10s
+    networks:
+      - app-network
 
-  # 2. Servicio Backend (API)
-  api:
-    build: ./backend
+  users-service:
+    build: ./users-service
+    container_name: users_service_container
+    restart: always
     env_file:
       - .env
     depends_on:
-      db:
+      users-db:
         condition: service_healthy
-    # ports: [...] <-- ELIMINADO. La API no debe ser visible desde fuera.
+    environment:
+      DB_USER: ${USERS_DB_USER}
+      DB_PASSWORD: ${USERS_DB_PASSWORD}
+      DB_NAME: ${USERS_DB_NAME}
+      DB_HOST: users-db
+      DB_PORT: 5432
+    ports:
+      - "8001:8000" # <--- NUEVO: Expuesto para ver Swagger en localhost:8001/docs
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
       interval: 5s
       timeout: 3s
       retries: 10
+    networks:
+      - app-network
+  
+  # -----------------------------------------------------------------
+  # ⚠️ ECOSYSTEM: INCIDENTS
+  # -----------------------------------------------------------------
 
-  # 3. Servicio Frontend (Vue + Nginx)
+  incidents-db:
+    image: postgres:15-alpine
+    container_name: incidents_db_container
+    restart: always
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${INCIDENTS_DB_USER}
+      POSTGRES_PASSWORD: ${INCIDENTS_DB_PASSWORD}
+      POSTGRES_DB: ${INCIDENTS_DB_NAME}
+    volumes:
+      - incidents_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${INCIDENTS_DB_USER} -d ${INCIDENTS_DB_NAME}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    networks:
+      - app-network
+
+  incidents-service:
+    build: ./incidents-service
+    container_name: incidents_service_container
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      incidents-db:
+        condition: service_healthy
+      users-service:
+        condition: service_started
+    environment:
+      DB_USER: ${INCIDENTS_DB_USER}
+      DB_PASSWORD: ${INCIDENTS_DB_PASSWORD}
+      DB_NAME: ${INCIDENTS_DB_NAME}
+      DB_HOST: incidents-db
+      DB_PORT: 5432
+      USERS_SERVICE_URL: ${USERS_SERVICE_URL}
+    ports:
+      - "8002:8000" # <--- NUEVO: Expuesto para ver Swagger en localhost:8002/docs
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - app-network
+
+  # -----------------------------------------------------------------
+  # 🖥️ FRONTEND
+  # -----------------------------------------------------------------
   frontend:
     build:
       context: ./frontend
-      args: # Pasa la variable VITE_API_URL al Dockerfile durante el build
+      args:
         - VITE_API_URL=${VITE_API_URL}
     env_file:
-      - .env # Nginx no usa esto, pero es bueno tenerlo
+      - .env
     ports:
-      - "5173:80" # <-- ESTE ES EL ÚNICO PUERTO EXPUESTO
+      - "5173:80"
     depends_on:
-      - api # Se asegura de que la API esté (al menos) iniciada
+      - gateway
+    networks:
+      - app-network
+
 
 volumes:
-  dbdata: {}
+  users_data: {}
+  incidents_data: {}
+
+networks:
+  app-network:
+    driver: bridge
