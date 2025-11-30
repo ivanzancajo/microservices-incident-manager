@@ -10,7 +10,7 @@ services:
     env_file:
       - .env
     ports:
-      - "8080:8000" 
+      - "8080:8000" # Acceso a Docs del Gateway
     depends_on:
       - users-service
       - incidents-service
@@ -21,7 +21,6 @@ services:
   # 👤 ECOSYSTEM: USERS
   # -----------------------------------------------------------------
   
-  # 1. Base de Datos de Usuarios
   users-db:
     image: postgres:15-alpine
     container_name: users_db_container
@@ -29,14 +28,12 @@ services:
     env_file:
       - .env
     environment:
-      # Usamos las variables específicas de usuarios definidas en el .env
       POSTGRES_USER: ${USERS_DB_USER}
       POSTGRES_PASSWORD: ${USERS_DB_PASSWORD}
       POSTGRES_DB: ${USERS_DB_NAME}
     volumes:
       - users_data:/var/lib/postgresql/data
     healthcheck:
-      # Adaptamos el check para usar las variables correctas
       test: ["CMD-SHELL", "psql -U ${USERS_DB_USER} -d ${USERS_DB_NAME}"]
       interval: 5s
       timeout: 3s
@@ -45,9 +42,8 @@ services:
     networks:
       - app-network
 
-  # 2. Microservicio de Usuarios
   users-service:
-    build: ./users-service # Apunta a la carpeta en la raíz
+    build: ./users-service
     container_name: users_service_container
     restart: always
     env_file:
@@ -56,14 +52,14 @@ services:
       users-db:
         condition: service_healthy
     environment:
-      # Mapeo: Lo que espera Python (DB_...) = Lo que hay en el .env (USERS_DB_...)
       DB_USER: ${USERS_DB_USER}
       DB_PASSWORD: ${USERS_DB_PASSWORD}
       DB_NAME: ${USERS_DB_NAME}
-      DB_HOST: users-db  # Nombre del servicio de arriba
+      DB_HOST: users-db
       DB_PORT: 5432
+    ports:
+      - "8001:8000" # <--- NUEVO: Expuesto para ver Swagger en localhost:8001/docs
     healthcheck:
-      # Verifica que FastAPI responda en /health
       test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
       interval: 5s
       timeout: 3s
@@ -71,7 +67,10 @@ services:
     networks:
       - app-network
   
-  # 3. Base de datos de incidencias
+  # -----------------------------------------------------------------
+  # ⚠️ ECOSYSTEM: INCIDENTS
+  # -----------------------------------------------------------------
+
   incidents-db:
     image: postgres:15-alpine
     container_name: incidents_db_container
@@ -79,14 +78,12 @@ services:
     env_file:
       - .env
     environment:
-      # Variables específicas para incidencias (incidents_db)
       POSTGRES_USER: ${INCIDENTS_DB_USER}
       POSTGRES_PASSWORD: ${INCIDENTS_DB_PASSWORD}
       POSTGRES_DB: ${INCIDENTS_DB_NAME}
     volumes:
       - incidents_data:/var/lib/postgresql/data
     healthcheck:
-      # Usamos pg_isready o psql. pg_isready es muy ligero y estándar en Alpine.
       test: ["CMD-SHELL", "pg_isready -U ${INCIDENTS_DB_USER} -d ${INCIDENTS_DB_NAME}"]
       interval: 5s
       timeout: 3s
@@ -95,7 +92,6 @@ services:
     networks:
       - app-network
 
-  # 4. Microservicio de Incidencias
   incidents-service:
     build: ./incidents-service
     container_name: incidents_service_container
@@ -105,20 +101,17 @@ services:
     depends_on:
       incidents-db:
         condition: service_healthy
-      # Espera a que users-service haya arrancado
-      # para evitar errores de conexión en las validaciones HTTP iniciales.
       users-service:
         condition: service_started
     environment:
-      # Credenciales BBDD Incidencias
       DB_USER: ${INCIDENTS_DB_USER}
       DB_PASSWORD: ${INCIDENTS_DB_PASSWORD}
       DB_NAME: ${INCIDENTS_DB_NAME}
       DB_HOST: incidents-db
       DB_PORT: 5432
-      # URL para llamar al servicio de usuarios (Validación HTTP)
-      # Usa el nombre del servicio definido arriba: 'users-service' puerto 8000 interno
       USERS_SERVICE_URL: ${USERS_SERVICE_URL}
+    ports:
+      - "8002:8000" # <--- NUEVO: Expuesto para ver Swagger en localhost:8002/docs
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
       interval: 5s
@@ -127,18 +120,20 @@ services:
     networks:
       - app-network
 
-  # 3. Servicio Frontend (Vue + Nginx)
+  # -----------------------------------------------------------------
+  # 🖥️ FRONTEND
+  # -----------------------------------------------------------------
   frontend:
     build:
       context: ./frontend
-      args: # Pasa la variable VITE_API_URL al Dockerfile durante el build
+      args:
         - VITE_API_URL=${VITE_API_URL}
     env_file:
-      - .env # Nginx no usa esto, pero es bueno tenerlo
+      - .env
     ports:
-      - "5173:80" # <-- ESTE ES EL ÚNICO PUERTO EXPUESTO
+      - "5173:80"
     depends_on:
-      - gateway # Se asegura de que la API esté (al menos) iniciada
+      - gateway
     networks:
       - app-network
 
