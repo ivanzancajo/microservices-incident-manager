@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 # Importaciones relativas (Crucial para que funcione dentro del paquete 'app')
 from .database import Base, engine, get_db
-from . import models, schemas, crud
+from . import models, schemas, crud, security
 
 # Crear las tablas de la BD de Usuarios al arrancar
 Base.metadata.create_all(bind=engine)
@@ -51,3 +51,28 @@ def delete_user_endpoint(user_id: int, db: Session = Depends(get_db)):
 @app.post("/usuarios/batch", response_model=list[schemas.UserOut])
 def get_users_batch(user_ids: list[int], db: Session = Depends(get_db)): 
     return crud.get_users_by_ids(db, user_ids)
+
+@app.post("/auth/login")
+def login_for_access_token(
+    form_data: OAuth2PasswordRequestForm = Depends(), 
+    db: Session = Depends(get_db)
+):
+    # 1. Buscamos al usuario por email (el formulario usa 'username' genérico)
+    user = crud.get_user_by_email(db, email=form_data.username)
+    
+    # 2. Verificamos si el usuario existe y si la contraseña coincide
+    if not user or not security.verify_password(form_data.password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Email o contraseña incorrectos",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # 3. Si todo es correcto, generamos el Token JWT
+    # Guardamos el ID (sub) y el email en el token
+    access_token = security.create_access_token(
+        data={"sub": str(user.id), "email": user.email}
+    )
+    
+    # 4. Devolvemos el token
+    return {"access_token": access_token, "token_type": "bearer"}
