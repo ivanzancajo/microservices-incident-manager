@@ -3,7 +3,7 @@ from sqlalchemy import select
 from fastapi import HTTPException, status
 
 # Usamos importación relativa porque estos archivos están en el mismo paquete 'app'
-from . import models, schemas
+from . import models, schemas, security
 
 
 def create_user(db: Session, data: schemas.UserCreate):
@@ -13,8 +13,17 @@ def create_user(db: Session, data: schemas.UserCreate):
             status_code=status.HTTP_400_BAD_REQUEST, detail="Email ya registrado"
         )
 
-    # Creamos la instancia del modelo
-    user = models.User(name=data.name, email=data.email)
+    #Generamos el hash de la contraseña recibida
+    hashed_pwd = security.get_password_hash(data.password)
+
+    #Creamos el usuario guardando el hash, NO la contraseña plana
+    user = models.User(
+        name=data.name, 
+        email=data.email, 
+        password_hash=hashed_pwd 
+    )
+    # -------------------------
+
     db.add(user)
     db.commit()
     db.refresh(user)
