@@ -1,20 +1,37 @@
+import os
+from datetime import datetime, timedelta, timezone
+from typing import Union
 from passlib.context import CryptContext
+from jose import jwt
 
-# Configuramos bcrypt como el algoritmo de hashing principal
-# "deprecated='auto'" permite que si en el futuro bcrypt se actualiza, 
-# el sistema pueda leer hashes viejos pero cree los nuevos con la versión segura.
+# 1. Configuración de Hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+# 2. Configuración JWT
+SECRET_KEY = os.getenv("JWT_SECRET", "secret_fallback")
+ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
+
 def verify_password(plain_password, hashed_password):
-    """
-    Comprueba si la contraseña en texto plano coincide con el hash guardado.
-    Se usará en el Login.
-    """
     return pwd_context.verify(plain_password, hashed_password)
 
 def get_password_hash(password):
-    """
-    Genera un hash seguro a partir de una contraseña en texto plano.
-    Se usará en el Registro.
-    """
     return pwd_context.hash(password)
+
+def create_access_token(data: dict, expires_delta: Union[timedelta, None] = None):
+    """
+    Genera un JWT firmado con nuestra clave secreta.
+    """
+    to_encode = data.copy()
+    
+    if expires_delta:
+        expire = datetime.now(timezone.utc) + expires_delta
+    else:
+        expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    
+    # Añadimos la expiración al payload
+    to_encode.update({"exp": expire})
+    
+    # Firmamos el token
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
