@@ -55,3 +55,7 @@ def delete_user(db: Session, user_id: int):
 def get_users_by_ids(db: Session, user_ids: list[int]):
     stmt = select(models.User).where(models.User.id.in_(user_ids))
     return list(db.scalars(stmt).all())
+
+def get_user_by_email(db: Session, email: str):
+    """Busca un usuario por su email. Necesario para el Login."""
+    return db.scalar(select(models.User).where(models.User.email == email))
