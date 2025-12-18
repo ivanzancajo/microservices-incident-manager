@@ -8,7 +8,6 @@ class IncidentBase(BaseModel):
     description: str = Field(min_length=1, max_length=200)
 
 class IncidentCreate(IncidentBase):
-    user_id: int
     status: StatusEnum = StatusEnum.abierta
 
 class IncidentUpdate(BaseModel):
