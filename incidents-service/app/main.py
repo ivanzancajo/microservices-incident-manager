@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from .db import Base, engine, get_db
 from . import models, schemas, crud
 from . import external
+from . import security
 
 Base.metadata.create_all(bind=engine)
 app = FastAPI(title="Microservicio de Indicencias")
@@ -23,7 +24,14 @@ def health():
     return {"status": "ok"}
 
 @app.post("/incidencias", response_model=schemas.IncidentOut, status_code=201)
-def create_incident_endpoint(payload: schemas.IncidentCreate, db: Session = Depends(get_db)):
+def create_incident_endpoint(
+    payload: schemas.IncidentCreate, 
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(security.get_current_user_id) 
+):
+    payload.user_id = current_user_id
+    
+    # Ya no es estrictamente necesario validar si el usuario existe externamente, se podria eliminar esta linea
     external.validate_user_exists(payload.user_id)
     return crud.create_incident(db, payload)
 
