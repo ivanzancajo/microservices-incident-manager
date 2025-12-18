@@ -27,8 +27,9 @@ def create_incident_endpoint(
     db: Session = Depends(get_db),
     current_user_id: int = Depends(security.get_current_user_id)
 ):
-    payload.user_id = current_user_id
-    return crud.create_incident(db, payload)
+
+    # Llamamos al CRUD pasando el ID del token por separado
+    return crud.create_incident(db, payload, user_id=current_user_id)
 
 
 @app.get("/incidencias", response_model=list[schemas.IncidentOut])
