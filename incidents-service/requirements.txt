@@ -6,3 +6,5 @@ pydantic>=2
 python-multipart
 pydantic[email]
 httpx
+python-jose[cryptography]
+python-dotenv
