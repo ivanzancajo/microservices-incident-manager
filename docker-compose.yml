@@ -60,8 +60,8 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       JWT_ALGORITHM: ${JWT_ALGORITHM}
       ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES}
-    ports:
-      - "8001:8000" # <--- NUEVO: Expuesto para ver Swagger en localhost:8001/docs
+    #ports:
+      #- "8001:8000" # <--- NUEVO: Expuesto para ver Swagger en localhost:8001/docs (ELIMINADO PARA SEGURIDAD)
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
       interval: 5s
@@ -116,8 +116,8 @@ services:
       #VARIABLES JWT
       JWT_SECRET: ${JWT_SECRET}
       JWT_ALGORITHM: ${JWT_ALGORITHM}
-    ports:
-      - "8002:8000" # <--- NUEVO: Expuesto para ver Swagger en localhost:8002/docs
+    #ports:
+      #- "8002:8000" # <--- NUEVO: Expuesto para ver Swagger en localhost:8002/docs (ELIMINADO PARA SEGURIDAD)
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
       interval: 5s
