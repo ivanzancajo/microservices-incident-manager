@@ -4,8 +4,8 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 
 # Leemos los secretos inyectados por Docker 
-SECRET_KEY = os.getenv("JWT_SECRET", "secret_fallback")
-ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+SECRET_KEY = os.getenv("JWT_SECRET")
+ALGORITHM = os.getenv("JWT_ALGORITHM")
 
 # Define que esperamos el token en el header 'Authorization: Bearer <token>'
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
