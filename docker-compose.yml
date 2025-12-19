@@ -15,7 +15,8 @@ services:
       - users-service
       - incidents-service
     networks:
-      - app-network
+      - public-network
+      - internal-network
       
   # -----------------------------------------------------------------
   # 👤 ECOSYSTEM: USERS
@@ -40,7 +41,7 @@ services:
       retries: 10
       start_period: 10s
     networks:
-      - app-network
+      - internal-network
 
   users-service:
     build: ./users-service
@@ -68,7 +69,7 @@ services:
       timeout: 3s
       retries: 10
     networks:
-      - app-network
+      - internal-network
   
   # -----------------------------------------------------------------
   # ⚠️ ECOSYSTEM: INCIDENTS
@@ -93,7 +94,7 @@ services:
       retries: 10
       start_period: 10s
     networks:
-      - app-network
+      - internal-network
 
   incidents-service:
     build: ./incidents-service
@@ -124,7 +125,7 @@ services:
       timeout: 3s
       retries: 10
     networks:
-      - app-network
+      - internal-network
 
   # -----------------------------------------------------------------
   # 🖥️ FRONTEND
@@ -141,7 +142,8 @@ services:
     depends_on:
       - gateway
     networks:
-      - app-network
+      - public-network
+      - internal-network
 
 
 volumes:
@@ -149,5 +151,7 @@ volumes:
   incidents_data: {}
 
 networks:
-  app-network:
+  internal-network:     # Red privada (BBDD y Backends)
+    internal: true      # Impide acceso desde fuera (opcional)
+  public-network:       # Red pública (Gateway y Frontend)
     driver: bridge
