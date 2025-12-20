@@ -93,7 +93,6 @@ const toggleMode = () => {
             id="name"
             type="text" 
             v-model="name" 
-            placeholder="Tu nombre" 
             :required="isRegistering"
           />
         </div>
@@ -104,7 +103,6 @@ const toggleMode = () => {
             id="email"
             type="email" 
             v-model="email" 
-            placeholder="ejemplo@empresa.com" 
             required 
           />
         </div>
@@ -115,7 +113,6 @@ const toggleMode = () => {
             id="password"
             type="password" 
             v-model="password" 
-            placeholder="••••••••" 
             required 
           />
         </div>
