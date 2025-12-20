@@ -1,18 +1,22 @@
 <script setup>
 import { ref } from 'vue';
-import { login } from '../api'; // Necesitaremos añadir esto a api.js luego
+import { login, createUser } from '../api'; // Importamos createUser
 
-// Definimos los eventos que este componente puede emitir al padre (App.vue)
 const emit = defineEmits(['login-success']);
 
 const email = ref('');
 const password = ref('');
+const name = ref(''); // Nuevo campo para el registro
 const error = ref(null);
 const isLoading = ref(false);
 
-const handleLogin = async () => {
-  if (!email.value || !password.value) {
-    error.value = 'Por favor, introduce tu email y contraseña.';
+// Estado para alternar entre Login y Registro
+const isRegistering = ref(false);
+
+const handleSubmit = async () => {
+  // Validación básica
+  if (!email.value || !password.value || (isRegistering.value && !name.value)) {
+    error.value = 'Por favor, rellena todos los campos obligatorios.';
     return;
   }
 
@@ -20,22 +24,54 @@ const handleLogin = async () => {
     isLoading.value = true;
     error.value = null;
 
-    // Llamamos a la API (implementaremos esta función en el siguiente paso)
-    const response = await login(email.value, password.value);
-    
-    // Guardamos el token
-    localStorage.setItem('token', response.access_token);
-    localStorage.setItem('user_email', email.value); // Opcional, para mostrarlo
+    if (isRegistering.value) {
+      // --- LÓGICA DE REGISTRO ---
+      
+      // 1. Crear el usuario
+      // Nota: Enviamos password en texto plano porque el backend lo hashea (ver users-service/crud.py)
+      await createUser({
+        name: name.value,
+        email: email.value,
+        password: password.value
+      });
+      
+      // 2. Si se crea bien, hacemos Login automático inmediatamente
+      const response = await login(email.value, password.value);
+      localStorage.setItem('token', response.access_token);
+      localStorage.setItem('user_email', email.value);
+      
+      emit('login-success');
 
-    // Avisamos a App.vue que el login fue correcto
-    emit('login-success');
+    } else {
+      // --- LÓGICA DE LOGIN NORMAL ---
+      const response = await login(email.value, password.value);
+      
+      localStorage.setItem('token', response.access_token);
+      localStorage.setItem('user_email', email.value);
+
+      emit('login-success');
+    }
 
   } catch (err) {
-    error.value = 'Credenciales incorrectas o error en el servidor.';
+    // Gestionamos mensajes de error específicos
+    if (isRegistering.value && err.message.includes('400')) {
+      error.value = 'El usuario ya existe. Prueba a iniciar sesión.';
+    } else if (!isRegistering.value && err.message.includes('401')) {
+      error.value = 'Credenciales incorrectas.';
+    } else {
+      error.value = err.message || 'Ocurrió un error inesperado.';
+    }
     console.error(err);
   } finally {
     isLoading.value = false;
   }
+};
+
+// Función para cambiar de modo y limpiar errores
+const toggleMode = () => {
+  isRegistering.value = !isRegistering.value;
+  error.value = null;
+  name.value = ''; // Limpiamos nombre al cambiar
 };
 </script>
 
@@ -43,11 +79,25 @@ const handleLogin = async () => {
   <div class="login-container">
     <div class="login-card">
       <header>
-        <h1>Iniciar Sesión</h1>
-        <p class="subtitle">Accede al gestor de incidencias</p>
+        <h1>{{ isRegistering ? 'Crear Cuenta' : 'Iniciar Sesión' }}</h1>
+        <p class="subtitle">
+          {{ isRegistering ? 'Únete al gestor de incidencias' : 'Accede al gestor de incidencias' }}
+        </p>
       </header>
 
-      <form @submit.prevent="handleLogin" class="login-form">
+      <form @submit.prevent="handleSubmit" class="login-form">
+        
+        <div v-if="isRegistering" class="form-group slide-down">
+          <label for="name">Nombre Completo</label>
+          <input 
+            id="name"
+            type="text" 
+            v-model="name" 
+            placeholder="Tu nombre" 
+            :required="isRegistering"
+          />
+        </div>
+
         <div class="form-group">
           <label for="email">Correo Electrónico</label>
           <input 
@@ -56,7 +106,6 @@ const handleLogin = async () => {
             v-model="email" 
             placeholder="ejemplo@empresa.com" 
             required 
-            autofocus
           />
         </div>
 
@@ -76,23 +125,30 @@ const handleLogin = async () => {
         </div>
 
         <button type="submit" class="btn-primary" :disabled="isLoading">
-          {{ isLoading ? 'Entrando...' : 'Entrar' }}
+          {{ isLoading ? 'Procesando...' : (isRegistering ? 'Registrarse' : 'Entrar') }}
         </button>
+
+        <div class="toggle-mode">
+          <p>
+            {{ isRegistering ? '¿Ya tienes cuenta?' : '¿No tienes cuenta?' }}
+            <a href="#" @click.prevent="toggleMode">
+              {{ isRegistering ? 'Inicia sesión' : 'Regístrate aquí' }}
+            </a>
+          </p>
+        </div>
+
       </form>
     </div>
   </div>
 </template>
 
 <style scoped>
-/* Reutilizando tus variables y estilos para mantener consistencia */
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap');
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css');
 
 :root {
   --primary-color: #5a67d8;
   --text-color: #2d3748;
-  --light-gray: #e2e8f0;
-  --danger-color: #e53e3e;
 }
 
 .login-container {
@@ -100,7 +156,7 @@ const handleLogin = async () => {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 80vh; /* Centrado vertical */
+  min-height: 80vh;
   padding: 1rem;
 }
 
@@ -146,7 +202,7 @@ input {
   border-radius: 8px;
   font-size: 1rem;
   transition: all 0.2s;
-  box-sizing: border-box; /* Asegura que el padding no rompa el ancho */
+  box-sizing: border-box;
 }
 
 input:focus {
@@ -158,7 +214,7 @@ input:focus {
 .btn-primary {
   width: 100%;
   padding: 1rem;
-  background-color: #5a67d8; /* Usamos el color primario sólido para el botón principal */
+  background-color: #5a67d8;
   color: white;
   border: none;
   border-radius: 8px;
@@ -193,5 +249,34 @@ input:focus {
   align-items: center;
   gap: 0.5rem;
   justify-content: center;
+}
+
+/* Estilos para el toggle de modo */
+.toggle-mode {
+  margin-top: 1.5rem;
+  font-size: 0.9rem;
+  color: #718096;
+}
+
+.toggle-mode a {
+  color: #5a67d8;
+  font-weight: 600;
+  text-decoration: none;
+  margin-left: 0.25rem;
+  cursor: pointer;
+}
+
+.toggle-mode a:hover {
+  text-decoration: underline;
+}
+
+/* Animación simple para el campo extra */
+.slide-down {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 </style>
