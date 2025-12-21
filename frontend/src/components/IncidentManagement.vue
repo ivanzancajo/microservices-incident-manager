@@ -113,7 +113,7 @@ const handleSaveChanges = async () => {
     editingIncident.value = null;
     await fetchIncidents();
   } catch (err) {
-    error.value = `Error al guardar los cambios: ${err.message}`;
+    error.value = `Error al guardar los cambios`;
   }
 };
 

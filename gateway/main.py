@@ -1,6 +1,6 @@
 import os
 import httpx
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header
 from typing import List, Optional
 
 app = FastAPI(title="BFF Gateway")
@@ -10,11 +10,24 @@ USERS_SERVICE_URL = os.getenv("USERS_SERVICE_URL")
 INCIDENTS_SERVICE_URL = os.getenv("INCIDENTS_SERVICE_URL")
 
 @app.get("/incidencias-detalladas")
-async def get_incidents_with_details():
+async def get_incidents_with_details(authorization: Optional[str] = Header(None)):
+    # Si no hay token, rechazamos antes de intentar nada (ahorra tiempo)
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Token de autenticación no proporcionado")
+    # Preparamos las cabeceras para las peticiones internas
+    forward_headers = {"Authorization": authorization}
     async with httpx.AsyncClient() as client:
         # 1. Obtener todas las incidencias
         try:
-            incidents_resp = await client.get(f"{INCIDENTS_SERVICE_URL}/incidencias")
+            incidents_resp = await client.get(
+                f"{INCIDENTS_SERVICE_URL}/incidencias",
+                headers=forward_headers
+            )
+
+            # Si el token expiró o es inválido, el microservicio devolverá 401
+            if incidents_resp.status_code == 401:
+                raise HTTPException(status_code=401, detail="Token inválido o expirado")
+            
             incidents_resp.raise_for_status()
             incidents = incidents_resp.json()
         except Exception as e:
@@ -27,7 +40,11 @@ async def get_incidents_with_details():
         users_map = {}
         if user_ids:
             try:
-                users_resp = await client.post(f"{USERS_SERVICE_URL}/usuarios/batch", json=user_ids)
+                users_resp = await client.post(
+                    f"{USERS_SERVICE_URL}/usuarios/batch", 
+                    json=user_ids,
+                    headers=forward_headers
+                )
                 users_resp.raise_for_status()
                 users_list = users_resp.json()
                 # Crear diccionario para búsqueda rápida: {id: {datos_usuario}}

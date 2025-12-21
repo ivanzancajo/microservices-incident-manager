@@ -3,7 +3,7 @@ import { ref, onMounted } from 'vue';
 import { getUsers, createUser, deleteUser } from '../api';
 
 const users = ref([]);
-const newUser = ref({ name: '', email: '' });
+const newUser = ref({ name: '', email: '', password: '' });
 const error = ref(null);
 const isLoading = ref(true);
 
@@ -20,13 +20,13 @@ const fetchUsers = async () => {
 };
 
 const handleCreateUser = async () => {
-  if (!newUser.value.name || !newUser.value.email) {
-    error.value = 'El nombre y el correo electrónico son obligatorios.';
+  if (!newUser.value.name || !newUser.value.email || !newUser.value.password) {
+    error.value = 'El nombre, el correo electrónico y la contraseña son obligatorios.';
     return;
   }
   try {
     await createUser({ ...newUser.value });
-    newUser.value = { name: '', email: '' }; // Reset form
+    newUser.value = { name: '', email: '', password: '' }; // Reset form
     await fetchUsers(); // Refresh list
   } catch (err) {
     error.value = `Error al crear el usuario: ${err.message}`;
@@ -59,6 +59,9 @@ onMounted(fetchUsers);
       </div>
       <div class="form-group">
         <input type="email" v-model="newUser.email" placeholder="Correo Electrónico" required />
+      </div>
+      <div class="form-group">
+        <input type="password" v-model="newUser.password" placeholder="Contraseña" required />
       </div>
       <button type="submit" class="btn-primary">Añadir Usuario</button>
     </form>
@@ -141,7 +144,8 @@ header h1 {
 }
 
 input[type="text"],
-input[type="email"] {
+input[type="email"],
+input[type="password"] {
   width: 100%;
   padding: 1rem;
   border: 1px solid var(--light-gray);
@@ -154,8 +158,7 @@ input[type="email"] {
   background-color: white;
 }
 
-input[type="text"]:focus,
-input[type="email"]:focus {
+input[type="text"]:focus {
   outline: none;
   border-color: var(--primary-color);
   box-shadow: 0 0 0 3px rgba(90, 103, 216, 0.3);
