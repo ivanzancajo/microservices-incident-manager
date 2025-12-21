@@ -9,9 +9,15 @@ const getAuthHeaders = () => {
 };
 
 // Manejador de respuestas (igual que antes, pero mejorado para 401)
-const handleResponse = async (response) => {
+const handleResponse = async (response, isLoginRequest = false) => {
   if (!response.ok) {
-    // Si el token ha expirado o es inválido (401), limpiamos sesión y redirigimos
+    // CASO 1: Error 401 en el Login (Credenciales malas) -> Solo lanzamos error
+    if (response.status === 401 && isLoginRequest) {
+      // Intentamos leer el mensaje del backend ("Email o contraseña incorrectos")
+      const errorData = await response.json().catch(() => ({ detail: 'Credenciales incorrectas' }));
+      throw new Error(errorData.detail);
+    }
+    // CASO 2: Error 401 en otras rutas (Sesión expirada) -> Limpiamos y recargamos
     if (response.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user_email');
@@ -19,7 +25,7 @@ const handleResponse = async (response) => {
       window.location.reload();
       throw new Error('Sesión expirada. Por favor, identifícate de nuevo.');
     }
-    
+    // CASO 3: Otros errores (500, 404, etc.)
     const error = await response.json().catch(() => ({ message: 'Error de red o servidor' }));
     throw new Error(error.detail || error.message);
   }
@@ -44,7 +50,8 @@ export const login = (email, password) => {
       'Content-Type': 'application/x-www-form-urlencoded',
     },
     body: formData,
-  }).then(handleResponse);
+    // Pasamos 'true' para indicar que esta es la petición de login
+  }).then(res => handleResponse(res, true));
 };
 
 // --- Users Service ---
