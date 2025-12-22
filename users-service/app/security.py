@@ -15,6 +15,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 SECRET_KEY = os.getenv("JWT_SECRET", "secret_fallback")
 ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
+REFRESH_TOKEN_EXPIRE_DAYS = 7
 
 # Esquema de autenticación: Le dice a FastAPI que el token viene en
 # la cabecera "Authorization: Bearer <token>" y que el login es en "/auth/login"
@@ -38,11 +39,31 @@ def create_access_token(data: dict, expires_delta: Union[timedelta, None] = None
         expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     
     # Añadimos la expiración al payload
-    to_encode.update({"exp": expire})
+    # Añadimos type para distinguir que es un token de acceso
+    to_encode.update({"exp": expire, "type": "access"})
     
     # Firmamos el token
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
+
+# Función para crear Refresh Tokens
+def create_refresh_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    # Añadimos 'type' para que este token NO sirva para acceder a endpoints normales
+    to_encode.update({"exp": expire, "type": "refresh"})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+# Función específica para validar Refresh Tokens
+def verify_refresh_token(token: str):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("type") != "refresh":
+            return None
+        return payload.get("sub") # Devuelvo el ID del usuario
+    except JWTError:
+        return None
 
 def get_current_user(
     token: str = Depends(oauth2_scheme), 
