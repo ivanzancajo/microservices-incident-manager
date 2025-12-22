@@ -61,8 +61,8 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       JWT_ALGORITHM: ${JWT_ALGORITHM}
       ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES}
-    #ports:
-      #- "8001:8000" # <--- NUEVO: Expuesto para ver Swagger en localhost:8001/docs (ELIMINADO PARA SEGURIDAD)
+    ports:
+      - "8001:8000" # <--- Expuesto para ver Swagger en localhost:8001/docs 
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
       interval: 5s
@@ -70,6 +70,7 @@ services:
       retries: 10
     networks:
       - internal-network
+      - public-network
   
   # -----------------------------------------------------------------
   # ⚠️ ECOSYSTEM: INCIDENTS
@@ -117,8 +118,8 @@ services:
       #VARIABLES JWT
       JWT_SECRET: ${JWT_SECRET}
       JWT_ALGORITHM: ${JWT_ALGORITHM}
-    #ports:
-      #- "8002:8000" # <--- NUEVO: Expuesto para ver Swagger en localhost:8002/docs (ELIMINADO PARA SEGURIDAD)
+    ports:
+      - "8002:8000" # <--- Expuesto para ver Swagger en localhost:8002/docs
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
       interval: 5s
@@ -126,6 +127,7 @@ services:
       retries: 10
     networks:
       - internal-network
+      - public-network
 
   # -----------------------------------------------------------------
   # 🖥️ FRONTEND
