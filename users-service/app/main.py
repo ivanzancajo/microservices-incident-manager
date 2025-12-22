@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends, Query, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+from fastapi import Body
 
 # Importaciones relativas (Crucial para que funcione dentro del paquete 'app')
 from .database import Base, engine, get_db
@@ -89,6 +90,34 @@ def login_for_access_token(
     access_token = security.create_access_token(
         data={"sub": str(user.id), "email": user.email}
     )
-    
+    refresh_token = security.create_refresh_token(
+        data={"sub": str(user.id)}
+    )
     # 4. Devolvemos el token
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
+
+@app.post("/auth/refresh")
+def refresh_token_endpoint(
+    # Esperamos un JSON: { "refresh_token": "..." }
+    refresh_token: str = Body(..., embed=True), 
+    db: Session = Depends(get_db)
+):
+    # 1. Validamos el refresh token
+    user_id = security.verify_refresh_token(refresh_token)
+    if not user_id:
+         raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token inválido o expirado",
+        )
+    
+    # 2. Buscamos al usuario (por si fue borrado en estos 7 días)
+    user = crud.get_user(db, user_id=int(user_id))
+    if not user:
+        raise HTTPException(status_code=401, detail="Usuario no encontrado")
+
+    # 3. Emitimos un NUEVO access token
+    new_access_token = security.create_access_token(
+        data={"sub": str(user.id), "email": user.email}
+    )
+    
+    return {"access_token": new_access_token, "token_type": "bearer"}
