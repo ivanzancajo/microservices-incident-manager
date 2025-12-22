@@ -8,6 +8,29 @@ const getAuthHeaders = () => {
   return token ? { 'Authorization': `Bearer ${token}` } : {};
 };
 
+// Variable para evitar bucles infinitos de refresco
+let isRefreshing = false;
+
+// Función auxiliar para pedir un nuevo token
+const refreshAccessToken = async () => {
+  const refreshToken = localStorage.getItem('refresh_token');
+  if (!refreshToken) throw new Error('No refresh token available');
+
+  const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refresh_token: refreshToken })
+  });
+
+  if (!response.ok) {
+    throw new Error('Refresh failed');
+  }
+
+  const data = await response.json();
+  localStorage.setItem('token', data.access_token); // Guardamos el nuevo token
+  return data.access_token;
+};
+
 // Manejador de respuestas (igual que antes, pero mejorado para 401)
 const handleResponse = async (response, isLoginRequest = false) => {
   if (!response.ok) {
@@ -17,14 +40,29 @@ const handleResponse = async (response, isLoginRequest = false) => {
       const errorData = await response.json().catch(() => ({ detail: 'Credenciales incorrectas' }));
       throw new Error(errorData.detail);
     }
-    // CASO 2: Error 401 en otras rutas (Sesión expirada) -> Limpiamos y recargamos
-    if (response.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user_email');
-      // Forzamos recarga para volver al login (manera simple de manejarlo)
-      window.location.reload();
-      throw new Error('Sesión expirada. Por favor, identifícate de nuevo.');
-    }
+    // CASO 2: Error 401 en Navegación (Token expirado) -> INTENTAR REFRESH
+    if (response.status === 401 && !isLoginRequest && !isRefreshing) {
+      console.log("Token expirado. Intentando renovar...");
+      isRefreshing = true;
+
+      try {
+        // 1. Intentamos obtener un token nuevo
+        const newToken = await refreshAccessToken();
+        isRefreshing = false;
+        console.log("Token renovado con éxito. Reintentando petición...");
+        window.location.reload(); 
+        return;
+      } catch (refreshError) {
+        console.error("No se pudo renovar la sesión:", refreshError);
+        isRefreshing = false;
+        // Si falla el refresh, entonces sí cerramos sesión
+        localStorage.removeItem('token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('user_email');
+        window.location.reload();
+        throw new Error('Sesión caducada.');
+      }
+    }  
     // CASO 3: Otros errores (500, 404, etc.)
     const error = await response.json().catch(() => ({ message: 'Error de red o servidor' }));
     throw new Error(error.detail || error.message);
@@ -38,20 +76,28 @@ const handleResponse = async (response, isLoginRequest = false) => {
 
 // --- Auth Service ---
 
-export const login = (email, password) => {
+export const login = async (email, password) => {
   // FastAPI OAuth2 espera x-www-form-urlencoded, NO JSON
   const formData = new URLSearchParams();
   formData.append('username', email); // El estándar OAuth2 usa 'username' aunque sea email
   formData.append('password', password);
 
-  return fetch(`${API_BASE_URL}/auth/login`, {
+  const response = await fetch(`${API_BASE_URL}/auth/login`, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
+      'Content-Type': 'application/x-www-form-urlencoded' },
     body: formData,
-    // Pasamos 'true' para indicar que esta es la petición de login
-  }).then(res => handleResponse(res, true));
+
+  });
+
+  // Usamos handleResponse con flag true
+  const data = await handleResponse(response, true);
+  
+  // Guardamos AMBOS tokens
+  localStorage.setItem('token', data.access_token);
+  localStorage.setItem('refresh_token', data.refresh_token); 
+  
+  return data;
 };
 
 // --- Users Service ---
