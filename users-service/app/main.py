@@ -32,16 +32,27 @@ def create_user_endpoint(payload: schemas.UserCreate, db: Session = Depends(get_
 def list_users_endpoint(
     db: Session = Depends(get_db), 
     limit: int = Query(100, ge=1, le=1000), 
-    offset: int = Query(0, ge=0)
+    offset: int = Query(0, ge=0),
+    # Si no hay token válido, lanza 401 y no ejecuta la función
+    current_user: schemas.UserOut = Depends(security.get_current_user)
 ):
     return crud.list_users(db, limit, offset)
 
 @app.get("/usuarios/{user_id}", response_model=schemas.UserOut)
-def get_user_endpoint(user_id: int, db: Session = Depends(get_db)):
+def get_user_endpoint(
+    user_id: int, 
+    db: Session = Depends(get_db),
+    current_user: schemas.UserOut = Depends(security.get_current_user)
+):
     return crud.get_user(db, user_id)
 
 @app.delete("/usuarios/{user_id}", status_code=204)
-def delete_user_endpoint(user_id: int, db: Session = Depends(get_db)):
+def delete_user_endpoint(
+    user_id: int, 
+    db: Session = Depends(get_db),
+    # PROTECCIÓN: Si no hay token válido, lanza 401 y no ejecuta la función
+    current_user: schemas.UserOut = Depends(security.get_current_user)
+):
     crud.delete_user(db, user_id)
     # Nota: Con status_code=204, no se debe retornar contenido en el body.
     return
@@ -50,7 +61,11 @@ def delete_user_endpoint(user_id: int, db: Session = Depends(get_db)):
 #Endpoint interno para el Gateway.
 #Devuelve los datos completos de los usuarios solicitados por sus IDs.
 @app.post("/usuarios/batch", response_model=list[schemas.UserOut])
-def get_users_batch(user_ids: list[int], db: Session = Depends(get_db)): 
+def get_users_batch(
+    user_ids: list[int], 
+    db: Session = Depends(get_db),
+    current_user: schemas.UserOut = Depends(security.get_current_user)
+): 
     return crud.get_users_by_ids(db, user_ids)
 
 @app.post("/auth/login")
