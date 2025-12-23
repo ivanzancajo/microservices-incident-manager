@@ -1,16 +1,19 @@
 import httpx
 import time
 import sys
+import os
 
-# URLs internas de la red Docker (acceso directo a los microservicios)
+# URLs internas de la red Docker
 USERS_SERVICE_URL = "http://users-service:8000"
 INCIDENTS_SERVICE_URL = "http://incidents-service:8000"
 
-# Datos de prueba
+# Datos de prueba (Incluimos contraseña para el login)
+DEFAULT_PASSWORD = "password123"
+
 mock_users = [
-    {"name": "Ana López", "email": "ana.lopez@example.com"},
-    {"name": "Carlos Méndez", "email": "carlos.mendez@example.com"},
-    {"name": "Beatriz Gámiz", "email": "beatriz.gamiz@example.com"}
+    {"name": "Ana López", "email": "ana.lopez@example.com", "password": DEFAULT_PASSWORD},
+    {"name": "Carlos Méndez", "email": "carlos.mendez@example.com", "password": DEFAULT_PASSWORD},
+    {"name": "Beatriz Gámiz", "email": "beatriz.gamiz@example.com", "password": DEFAULT_PASSWORD}
 ]
 
 mock_incidents = [
@@ -41,9 +44,8 @@ mock_incidents = [
 ]
 
 def wait_for_services():
-    """Espera a que los servicios estén disponibles antes de lanzar datos."""
     print("⏳ Esperando a que los servicios estén listos...")
-    retries = 5
+    retries = 10
     while retries > 0:
         try:
             u_resp = httpx.get(f"{USERS_SERVICE_URL}/health", timeout=2)
@@ -54,7 +56,7 @@ def wait_for_services():
         except Exception:
             pass
         
-        print("... servicios no disponibles aún, reintentando en 2s ...")
+        print(f"... reintentando en 2s ({retries} restantes)...")
         time.sleep(2)
         retries -= 1
     return False
@@ -64,59 +66,73 @@ def run_seed():
         print("❌ Error: Los servicios no respondieron a tiempo.")
         sys.exit(1)
 
-    print("\n🚀 Iniciando carga de datos de prueba...\n")
+    print("\n🚀 Iniciando carga de datos AUTENTICADA...\n")
 
-    # 1. Crear Usuarios y guardar sus IDs
-    email_to_id_map = {}
+    # Diccionario para guardar el token de cada email
+    # ¡Esta es la variable que te faltaba!
+    user_tokens = {}
 
-    print("--- Creando Usuarios ---")
+    print("--- 1. Creando Usuarios y Obteniendo Tokens ---")
     for user_data in mock_users:
         try:
-            # Intentamos crear el usuario
-            response = httpx.post(f"{USERS_SERVICE_URL}/usuarios", json=user_data)
+            # A) Crear usuario (o ignorar si ya existe)
+            resp_create = httpx.post(f"{USERS_SERVICE_URL}/usuarios", json=user_data)
             
-            if response.status_code == 201:
-                created_user = response.json()
-                print(f"✅ Usuario creado: {created_user['name']} (ID: {created_user['id']})")
-                email_to_id_map[user_data['email']] = created_user['id']
-            
-            elif response.status_code == 400:
-                print(f"⚠️  El usuario {user_data['email']} ya existe. Intentando recuperar ID...")
-                # Si ya existe, listamos para buscar su ID (solución simple para script de seed)
-                all_users = httpx.get(f"{USERS_SERVICE_URL}/usuarios").json()
-                for u in all_users:
-                    if u['email'] == user_data['email']:
-                        email_to_id_map[user_data['email']] = u['id']
-                        print(f"   -> ID recuperado: {u['id']}")
-                        break
+            if resp_create.status_code == 201:
+                print(f"👤 Usuario creado: {user_data['email']}")
+            elif resp_create.status_code == 400:
+                print(f"ℹ️  El usuario {user_data['email']} ya existe (continuamos con login).")
             else:
-                print(f"❌ Error creando usuario {user_data['name']}: {response.text}")
+                print(f"❌ Fallo creando usuario {user_data['email']}: {resp_create.text}")
+                # Si falla crear, intentamos login por si acaso ya existía
+            
+            # B) Login para obtener token
+            # El endpoint /auth/login espera form-data
+            login_data = {
+                "username": user_data['email'],
+                "password": user_data['password']
+            }
+            
+            resp_login = httpx.post(f"{USERS_SERVICE_URL}/auth/login", data=login_data)
+            
+            if resp_login.status_code == 200:
+                token = resp_login.json()["access_token"]
+                user_tokens[user_data['email']] = token
+                print(f"🔑 Token obtenido para: {user_data['email']}")
+            else:
+                print(f"⚠️ No se pudo loguear a {user_data['email']}. Status: {resp_login.status_code}")
 
         except Exception as e:
             print(f"❌ Excepción conectando con Users Service: {e}")
 
-    # 2. Crear Incidencias usando los IDs recuperados
-    print("\n--- Creando Incidencias ---")
+    print("\n--- 2. Creando Incidencias (Usando JWT) ---")
     for inc in mock_incidents:
-        email = inc.pop("user_email") # Sacamos el email y lo quitamos del dict
-        user_id = email_to_id_map.get(email)
+        user_email = inc.pop("user_email") 
+        token = user_tokens.get(user_email)
 
-        if not user_id:
-            print(f"⏭️  Saltando incidencia '{inc['title']}': Usuario no encontrado ({email})")
+        if not token:
+            print(f"⏭️  Saltando incidencia '{inc['title']}': No tenemos token para {user_email}")
             continue
 
-        # Asignamos el ID real
-        inc["user_id"] = user_id
+        # Header de autorización
+        headers = {
+            "Authorization": f"Bearer {token}"
+        }
 
+        # Nota: Ya NO enviamos 'user_id' porque lo eliminamos del esquema en SCRUM-94
         try:
-            response = httpx.post(f"{INCIDENTS_SERVICE_URL}/incidencias", json=inc)
+            response = httpx.post(
+                f"{INCIDENTS_SERVICE_URL}/incidencias", 
+                json=inc,
+                headers=headers
+            )
+            
             if response.status_code == 201:
                 data = response.json()
-                print(f"✅ Incidencia creada: '{data['title']}' asignada a User ID {user_id}")
-            elif response.status_code == 400:
-                 print(f"⚠️  Incidencia duplicada o error lógico: {response.text}")
+                print(f"✅ Incidencia creada: '{data['title']}' (ID: {data['id']})")
             else:
-                print(f"❌ Error creando incidencia: {response.text}")
+                print(f"❌ Error creando incidencia: {response.status_code} - {response.text}")
+                
         except Exception as e:
             print(f"❌ Excepción conectando con Incidents Service: {e}")
 

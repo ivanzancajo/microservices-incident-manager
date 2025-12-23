@@ -8,7 +8,7 @@ import datetime
 class Incident(Base):
     __tablename__ = "incidents"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    title: Mapped[str] = mapped_column(String(100), nullable=False)
+    title: Mapped[str] = mapped_column(String(100), nullable=True)
     description: Mapped[str] = mapped_column(String(200), nullable=False)
     status: Mapped[str] = mapped_column(Enum(StatusEnum), default=StatusEnum.abierta, nullable=False)
     user_id:  Mapped[int] = mapped_column(Integer, nullable=False)

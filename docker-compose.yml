@@ -15,7 +15,8 @@ services:
       - users-service
       - incidents-service
     networks:
-      - app-network
+      - public-network
+      - internal-network
       
   # -----------------------------------------------------------------
   # 👤 ECOSYSTEM: USERS
@@ -40,7 +41,7 @@ services:
       retries: 10
       start_period: 10s
     networks:
-      - app-network
+      - internal-network
 
   users-service:
     build: ./users-service
@@ -57,15 +58,19 @@ services:
       DB_NAME: ${USERS_DB_NAME}
       DB_HOST: users-db
       DB_PORT: 5432
-    ports:
-      - "8001:8000" # <--- NUEVO: Expuesto para ver Swagger en localhost:8001/docs
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ALGORITHM: ${JWT_ALGORITHM}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES}
+    #ports:
+      #- "8001:8000" # <--- Expuesto para ver Swagger en localhost:8001/docs (ELIMINADO PARA SEGURIDAD)
+
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
       interval: 5s
       timeout: 3s
       retries: 10
     networks:
-      - app-network
+      - internal-network
   
   # -----------------------------------------------------------------
   # ⚠️ ECOSYSTEM: INCIDENTS
@@ -90,7 +95,7 @@ services:
       retries: 10
       start_period: 10s
     networks:
-      - app-network
+      - internal-network
 
   incidents-service:
     build: ./incidents-service
@@ -110,15 +115,19 @@ services:
       DB_HOST: incidents-db
       DB_PORT: 5432
       USERS_SERVICE_URL: ${USERS_SERVICE_URL}
-    ports:
-      - "8002:8000" # <--- NUEVO: Expuesto para ver Swagger en localhost:8002/docs
+      #VARIABLES JWT
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ALGORITHM: ${JWT_ALGORITHM}
+    #ports:
+      #- "8002:8000" # <--- Expuesto para ver Swagger en localhost:8002/docs (ELIMINADO PARA SEGURIDAD)
+
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
       interval: 5s
       timeout: 3s
       retries: 10
     networks:
-      - app-network
+      - internal-network
 
   # -----------------------------------------------------------------
   # 🖥️ FRONTEND
@@ -135,7 +144,8 @@ services:
     depends_on:
       - gateway
     networks:
-      - app-network
+      - public-network
+      - internal-network
 
 
 volumes:
@@ -143,5 +153,7 @@ volumes:
   incidents_data: {}
 
 networks:
-  app-network:
+  internal-network:     # Red privada (BBDD y Backends)
+    internal: true      # Impide acceso desde fuera (opcional)
+  public-network:       # Red pública (Gateway y Frontend)
     driver: bridge

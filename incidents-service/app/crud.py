@@ -3,7 +3,7 @@ from sqlalchemy import select
 from fastapi import HTTPException, status
 from . import models, schemas
 
-def create_incident(db: Session, data: schemas.IncidentCreate):
+def create_incident(db: Session, data: schemas.IncidentCreate, user_id: int):
     # Verificamos si ya existe un incidente con el mismo título
     if db.scalar(select(models.Incident).where(models.Incident.title == data.title)):
         raise HTTPException(
@@ -11,11 +11,12 @@ def create_incident(db: Session, data: schemas.IncidentCreate):
             detail="Incidente con este título ya existe"
         )
     
-    # Creamos la instancia del modelo
+    # Creamos la instancia del modelo usando los datos del esquema + el user_id seguro
     incident = models.Incident(
         title=data.title, 
         description=data.description,
-        user_id=data.user_id
+        status=data.status, # Aseguramos que se pasa el status (por defecto abierta)
+        user_id=user_id     # <--- AQUÍ VINCULAMOS LA AUTORÍA
     )
     db.add(incident)
     db.commit()
