@@ -2,15 +2,28 @@
 import { ref, onMounted } from 'vue';
 import { getUsers, createUser, deleteUser } from '../api';
 
+// --- ESTADO GENERAL ---
 const users = ref([]);
 const newUser = ref({ name: '', email: '', password: '' });
 const error = ref(null);
 const isLoading = ref(true);
+const successMessage = ref(null);
+// CORRECCIÓN: Guardamos el email en una variable reactiva para usarla en el template
+const currentUserEmail = ref(localStorage.getItem('user_email') || '');
 
+// --- ESTADO PARA EL MODAL PERSONALIZADO ---
+const showDeleteModal = ref(false);
+const userToDeleteId = ref(null);
+const isSelfDelete = ref(false);
+const isDeleting = ref(false);
+
+// Cargar usuarios al inicio
 const fetchUsers = async () => {
   try {
     isLoading.value = true;
     users.value = await getUsers();
+    // Actualizamos el email actual por si ha cambiado
+    currentUserEmail.value = localStorage.getItem('user_email');
     error.value = null;
   } catch (err) {
     error.value = `Error al cargar los usuarios: ${err.message}`;
@@ -19,27 +32,76 @@ const fetchUsers = async () => {
   }
 };
 
+// Crear usuario
 const handleCreateUser = async () => {
   if (!newUser.value.name || !newUser.value.email || !newUser.value.password) {
-    error.value = 'El nombre, el correo electrónico y la contraseña son obligatorios.';
+    error.value = 'Todos los campos son obligatorios.';
     return;
   }
   try {
     await createUser({ ...newUser.value });
-    newUser.value = { name: '', email: '', password: '' }; // Reset form
-    await fetchUsers(); // Refresh list
+    newUser.value = { name: '', email: '', password: '' }; 
+    await fetchUsers(); 
+    showSuccess("Usuario creado correctamente");
   } catch (err) {
     error.value = `Error al crear el usuario: ${err.message}`;
   }
 };
 
-const handleDeleteUser = async (userId) => {
+// --- LÓGICA DE BORRADO ---
+
+// 1. Solicitud de borrado (Abre el modal)
+const confirmDeleteRequest = (user) => {
+  userToDeleteId.value = user.id;
+  
+  // Detectar si el usuario a borrar coincide con el logueado
+  // Usamos la variable local, no localStorage directo
+  isSelfDelete.value = (user.email === currentUserEmail.value);
+  
+  // Mostrar el modal
+  showDeleteModal.value = true;
+};
+
+// 2. Ejecutar borrado (Al confirmar en el modal)
+const executeDelete = async () => {
+  if (!userToDeleteId.value) return;
+
+  isDeleting.value = true; 
+
   try {
-    await deleteUser(userId);
-    await fetchUsers(); // Refresh list
+    await deleteUser(userToDeleteId.value);
+
+    if (isSelfDelete.value) {
+      // CASO A: El usuario se borró a sí mismo
+      localStorage.removeItem('token');
+      localStorage.removeItem('user_email');
+      localStorage.removeItem('refresh_token');
+      window.location.reload(); 
+    } else {
+      // CASO B: Borrado de otro usuario
+      await fetchUsers();
+      showSuccess("Usuario eliminado correctamente");
+      closeModal();
+    }
   } catch (err) {
-    error.value = `Error al eliminar el usuario: ${err.message}`;
+    error.value = `Error al eliminar: ${err.message}`;
+    closeModal();
+  } finally {
+    isDeleting.value = false;
   }
+};
+
+const closeModal = () => {
+  showDeleteModal.value = false;
+  userToDeleteId.value = null;
+  isSelfDelete.value = false;
+};
+
+const showSuccess = (msg) => {
+  successMessage.value = msg;
+  setTimeout(() => {
+    successMessage.value = null;
+  }, 3000);
 };
 
 onMounted(fetchUsers);
@@ -51,7 +113,6 @@ onMounted(fetchUsers);
       <h1>Gestión de Usuarios</h1>
     </header>
 
-    <!-- Create User Form -->
     <form @submit.prevent="handleCreateUser" class="user-form">
       <h3>Añadir Nuevo Usuario</h3>
       <div class="form-group">
@@ -67,7 +128,13 @@ onMounted(fetchUsers);
     </form>
 
     <h2 class="list-title">Lista de Usuarios</h2>
+    
     <div v-if="isLoading" class="loading">Cargando usuarios...</div>
+    
+    <div v-if="successMessage" class="success-message">
+      <i class="fas fa-check-circle"></i> {{ successMessage }}
+    </div>
+    
     <div v-if="error" class="error">{{ error }}</div>
 
     <div class="user-list" v-if="!isLoading && users.length">
@@ -75,11 +142,48 @@ onMounted(fetchUsers);
         <div class="user-info">
           <strong class="user-name">{{ user.name }}</strong>
           <span class="user-email">{{ user.email }}</span>
+          <span v-if="user.email === currentUserEmail" class="badge-me"> (Tú)</span>
         </div>
-        <button @click="handleDeleteUser(user.id)" class="btn-danger">Eliminar</button>
+        <button @click="confirmDeleteRequest(user)" class="btn-danger">Eliminar</button>
       </div>
     </div>
+    
     <p v-if="!isLoading && !users.length" class="no-users">No se encontraron usuarios. ¡Añade uno para empezar!</p>
+
+    <div v-if="showDeleteModal" class="modal-overlay" @click.self="closeModal">
+      <div class="modal-card" :class="{ 'modal-danger': isSelfDelete }">
+        
+        <div class="modal-icon">
+          <i class="fas" :class="isSelfDelete ? 'fa-exclamation-triangle' : 'fa-trash-alt'"></i>
+        </div>
+
+        <h3 class="modal-title">
+          {{ isSelfDelete ? '¿ELIMINAR TU CUENTA?' : '¿Eliminar usuario?' }}
+        </h3>
+
+        <div class="modal-body">
+          <p v-if="!isSelfDelete">
+            Esta acción no se puede deshacer. ¿Estás seguro de continuar?
+          </p>
+          <div v-else class="warning-box">
+            <p><strong>⚠️ ADVERTENCIA CRÍTICA</strong></p>
+            <ul>
+              <li>Tu cuenta será borrada permanentemente.</li>
+              <li>Se cerrará tu sesión actual.</li>
+              <li>Serás redirigido al inicio de sesión.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button @click="closeModal" class="btn-cancel" :disabled="isDeleting">Cancelar</button>
+          <button @click="executeDelete" class="btn-confirm" :disabled="isDeleting">
+            {{ isDeleting ? 'Borrando...' : (isSelfDelete ? 'Sí, eliminar mi cuenta' : 'Eliminar') }}
+          </button>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -152,13 +256,12 @@ input[type="password"] {
   border-radius: 8px;
   font-size: 1rem;
   transition: box-shadow 0.2s, border-color 0.2s;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
   background-color: white;
+  -webkit-appearance: none; 
+  appearance: none;
 }
 
-input[type="text"]:focus {
+input:focus {
   outline: none;
   border-color: var(--primary-color);
   box-shadow: 0 0 0 3px rgba(90, 103, 216, 0.3);
@@ -171,7 +274,6 @@ input[type="text"]:focus {
   cursor: pointer;
   font-size: 1rem;
   font-weight: 500;
-  /* width: 100%; removed */
   transition: all 0.3s ease;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
   text-transform: uppercase;
@@ -229,11 +331,15 @@ input[type="text"]:focus {
   font-size: 0.9rem;
 }
 
+.badge-me {
+  font-size: 0.8rem;
+  color: var(--primary-color);
+  font-weight: bold;
+}
+
 .btn-danger {
   background-color: rgb(250, 250, 250);
   color: var(--danger-color);
-  
-  
   width: auto;
 }
 
@@ -250,10 +356,141 @@ input[type="text"]:focus {
   color: var(--dark-gray);
 }
 
+.success-message {
+  text-align: center;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  font-size: 1rem;
+  color: #22543d;
+  background-color: #c6f6d5;
+  border: 1px solid #22543d;
+  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .error {
   color: var(--danger-color);
   background-color: #fed7d7;
   border: 1px solid var(--danger-color);
   border-radius: 8px;
+}
+
+/* --- ESTILOS DEL MODAL --- */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(3px);
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modal-card {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 400px;
+  text-align: center;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.modal-danger {
+  border-top: 5px solid var(--danger-color);
+}
+
+.modal-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  color: var(--dark-gray);
+}
+
+.modal-danger .modal-icon {
+  color: var(--danger-color);
+  animation: pulse 2s infinite;
+}
+
+.modal-title {
+  margin: 0 0 1rem;
+  font-size: 1.5rem;
+  color: var(--text-color);
+  font-weight: 600;
+}
+
+.modal-body {
+  margin-bottom: 2rem;
+  color: #4a5568;
+}
+
+.warning-box {
+  background-color: #fff5f5;
+  border: 1px solid #feb2b2;
+  color: #c53030;
+  padding: 1rem;
+  border-radius: 8px;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.warning-box ul {
+  margin: 0.5rem 0 0 1.2rem;
+  padding: 0;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.btn-cancel, .btn-confirm {
+  flex: 1;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: opacity 0.2s;
+}
+
+.btn-cancel {
+  background-color: #e2e8f0;
+  color: #4a5568;
+}
+
+.btn-confirm {
+  background-color: var(--danger-color);
+  color: white;
+}
+
+.btn-cancel:hover, .btn-confirm:hover {
+  opacity: 0.9;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes popIn {
+  from { transform: scale(0.9); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
 }
 </style>
