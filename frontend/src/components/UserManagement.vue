@@ -35,21 +35,55 @@ const handleCreateUser = async () => {
 };
 
 const handleDeleteUser = async (userId) => {
+  // 1. IDENTIFICAR AL USUARIO ACTUAL
+  // Recuperamos el email guardado en el login
+  const loggedEmail = localStorage.getItem('user_email');
+  
+  // Buscamos en la lista de usuarios cargada (users.value) cuál coincide con mi email
+  const currentUser = users.value.find(u => u.email === loggedEmail);
+  const currentUserId = currentUser ? currentUser.id : null;
+
+  // 2. DETECTAR SI ES AUTO-ELIMINACIÓN
+  const isSelfDelete = (userId === currentUserId);
+
+  // 3. CONFIGURAR EL AVISO
+  let confirmMessage = "¿Estás seguro de que deseas eliminar este usuario?";
+
+  if (isSelfDelete) {
+    confirmMessage = "⚠️ AVISO IMPORTANTE ⚠️\n\nEstás a punto de eliminar tu cuenta de usuario.\n\nSi confirmas esta acción:\n1. Tu usuario será borrado permanentemente.\n2. Se cerrará tu sesión inmediatamente.\n3. Serás redirigido a la pantalla de Login.\n\n¿Deseas continuar?";
+  }
+
+  // 4. MOSTRAR CONFIRMACIÓN
+  if (!confirm(confirmMessage)) {
+    return; // El usuario canceló
+  }
+
   try {
+    // Llamada a la API para borrar
     await deleteUser(userId);
-    await fetchUsers(); // Refrescar la lista
-    
-    // 2. ACTUALIZACIÓN: Limpiamos errores y mostramos mensaje de éxito
-    error.value = null;
-    successMessage.value = "Usuario eliminado correctamente.";
-    
-    // Opcional: Que el mensaje desaparezca solo a los 3 segundos
-    setTimeout(() => {
-      successMessage.value = null;
-    }, 3000);
+
+    // 5. ACCIONES POSTERIORES
+    if (isSelfDelete) {
+      // CASO A: Me borré a mí mismo -> Limpieza y Redirección
+      localStorage.removeItem('token');
+      localStorage.removeItem('user_email');
+      localStorage.removeItem('refresh_token'); // Si lo usas
+      
+      // Forzamos la recarga de la página. 
+      // Al no haber token, App.vue mostrará automáticamente el componente Login.
+      window.location.reload(); 
+    } else {
+      // CASO B: Borré a otro -> Actualizar la lista (tu código original)
+      await fetchUsers();
+      error.value = null;
+      successMessage.value = "Usuario eliminado correctamente.";
+      
+      setTimeout(() => {
+        successMessage.value = null;
+      }, 3000);
+    }
 
   } catch (err) {
-    // Si falla, borramos el mensaje de éxito y mostramos el error
     successMessage.value = null;
     error.value = `Error al eliminar el usuario: ${err.message}`;
   }
