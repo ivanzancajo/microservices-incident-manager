@@ -6,6 +6,7 @@ const users = ref([]);
 const newUser = ref({ name: '', email: '', password: '' });
 const error = ref(null);
 const isLoading = ref(true);
+const successMessage = ref(null); // 1. NUEVO: Estado para el mensaje de éxito
 
 const fetchUsers = async () => {
   try {
@@ -36,8 +37,20 @@ const handleCreateUser = async () => {
 const handleDeleteUser = async (userId) => {
   try {
     await deleteUser(userId);
-    await fetchUsers(); // Refresh list
+    await fetchUsers(); // Refrescar la lista
+    
+    // 2. ACTUALIZACIÓN: Limpiamos errores y mostramos mensaje de éxito
+    error.value = null;
+    successMessage.value = "Usuario eliminado correctamente.";
+    
+    // Opcional: Que el mensaje desaparezca solo a los 3 segundos
+    setTimeout(() => {
+      successMessage.value = null;
+    }, 3000);
+
   } catch (err) {
+    // Si falla, borramos el mensaje de éxito y mostramos el error
+    successMessage.value = null;
     error.value = `Error al eliminar el usuario: ${err.message}`;
   }
 };
@@ -68,6 +81,9 @@ onMounted(fetchUsers);
 
     <h2 class="list-title">Lista de Usuarios</h2>
     <div v-if="isLoading" class="loading">Cargando usuarios...</div>
+    <div v-if="successMessage" class="success-message">
+      <i class="fas fa-check-circle"></i> {{ successMessage }}
+    </div>
     <div v-if="error" class="error">{{ error }}</div>
 
     <div class="user-list" v-if="!isLoading && users.length">
@@ -248,6 +264,21 @@ input[type="text"]:focus {
   padding: 3rem;
   font-size: 1.2rem;
   color: var(--dark-gray);
+}
+
+.success-message {
+  text-align: center;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  font-size: 1rem;
+  color: #22543d;             /* Texto verde oscuro */
+  background-color: #c6f6d5;  /* Fondo verde claro */
+  border: 1px solid #22543d;
+  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .error {
