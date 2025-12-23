@@ -7,7 +7,7 @@ class UserBase(BaseModel):
     
 # 2. Esquema para creación (Input)
 class UserCreate(UserBase):
-    pass
+    password: str = Field(min_length=4, description="Contraseña en texto plano")
 
 # 3. Esquema para respuesta (Output)
 class UserOut(UserBase):

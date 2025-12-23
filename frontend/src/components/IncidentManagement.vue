@@ -11,6 +11,9 @@ const isLoading = ref(true);
 const statusDropdownOpen = ref(null);
 const userDropdownOpen = ref(false);
 const newStatusDropdownOpen = ref(false);
+const showDeleteModal = ref(false);
+const incidentToDeleteId = ref(null);
+const isDeleting = ref(false);
 
 const incidentStatusEnum = ['abierta', 'en_progreso', 'cerrada'];
 
@@ -57,7 +60,24 @@ const fetchIncidents = async () => {
 
 const fetchUsers = async () => {
   try {
-    users.value = await getUsers();
+    // 1. Obtenemos todos los usuarios (o el backend podría filtrar, pero lo hacemos aquí según solicitado)
+    const allUsers = await getUsers();
+    
+    // 2. Recuperamos el email del usuario logueado
+    const loggedEmail = localStorage.getItem('user_email');
+
+    // 3. Filtramos la lista para dejar solo al usuario actual
+    if (loggedEmail) {
+      users.value = allUsers.filter(u => u.email === loggedEmail);
+      
+      // 4. Opcional: Auto-seleccionar al usuario en el formulario para ahorrar un clic
+      if (users.value.length > 0) {
+        newIncident.value.user_id = users.value[0].id;
+      }
+    } else {
+      // Si no hay email en localstorage, no mostramos usuarios (o mostramos todos como fallback)
+      users.value = [];
+    }
   } catch (err) {
     error.value = `Error al cargar los usuarios: ${err.message}`;
   }
@@ -72,6 +92,10 @@ const handleCreateIncident = async () => {
   try {
     await createIncident({ ...newIncident.value });
     newIncident.value = { title: '', description: '', user_id: null, status: null };
+    // Restaurar el usuario seleccionado por defecto si solo hay uno (UX)
+    if (users.value.length > 0) {
+      newIncident.value.user_id = users.value[0].id;
+    }
     await fetchIncidents();
   } catch (err) {
     error.value = `Error al crear la incidencia: ${err.message}`;
@@ -88,13 +112,29 @@ const handleUpdateIncident = async (incident, newStatus) => {
   }
 };
 
-const handleDeleteIncident = async (incidentId) => {
+const confirmDeleteRequest = (incidentId) => {
+  incidentToDeleteId.value = incidentId;
+  showDeleteModal.value = true;
+};
+
+const executeDelete = async () => {
+  if (!incidentToDeleteId.value) return;
+  isDeleting.value = true;
   try {
-    await deleteIncident(incidentId);
+    await deleteIncident(incidentToDeleteId.value);
     await fetchIncidents();
+    closeModal();
   } catch (err) {
     error.value = `Error al eliminar la incidencia: ${err.message}`;
+    closeModal();
+  } finally {
+    isDeleting.value = false;
   }
+};
+
+const closeModal = () => {
+  showDeleteModal.value = false;
+  incidentToDeleteId.value = null;
 };
 
 const handleEditClick = (incident) => {
@@ -113,7 +153,7 @@ const handleSaveChanges = async () => {
     editingIncident.value = null;
     await fetchIncidents();
   } catch (err) {
-    error.value = `Error al guardar los cambios: ${err.message}`;
+    error.value = `Error al guardar los cambios`;
   }
 };
 
@@ -287,7 +327,7 @@ onMounted(() => {
                 </a>
               </div>
             </div>
-            <button @click="handleDeleteIncident(incident.id)" class="btn-danger">Eliminar</button>
+            <button @click="confirmDeleteRequest(incident.id)" class="btn-danger">Eliminar</button>
           </div>
         </div>
         <button @click="handleEditClick(incident)" class="btn-edit">
@@ -296,6 +336,25 @@ onMounted(() => {
       </div>
     </div>
     <p v-if="!isLoading && !incidents.length" class="no-incidents">No se encontraron incidencias. ¡Añade una para empezar!</p>
+
+    <!-- Modal de Confirmación -->
+    <div v-if="showDeleteModal" class="modal-overlay" @click.self="closeModal">
+      <div class="modal-card">
+        <div class="modal-icon">
+          <i class="fas fa-trash-alt"></i>
+        </div>
+        <h3 class="modal-title">¿Eliminar incidencia?</h3>
+        <div class="modal-body">
+          <p>Esta acción no se puede deshacer. ¿Estás seguro de continuar?</p>
+        </div>
+        <div class="modal-actions">
+          <button @click="closeModal" class="btn-cancel" :disabled="isDeleting">Cancelar</button>
+          <button @click="executeDelete" class="btn-confirm" :disabled="isDeleting">
+            {{ isDeleting ? 'Borrando...' : 'Eliminar' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 <style scoped>
@@ -623,47 +682,116 @@ select:focus {
   transform: translateY(-2px);
 }
 
-.btn-edit {
-  background-color: rgb(250, 250, 250);
-  color: var(--primary-color);
-  width: 40px;
-  height: 40px;
-  padding: 0;
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+}
+
+.modal-card {
+  background-color: white;
+  padding: 2rem;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 400px;
+  text-align: center;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  animation: modalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes modalPop {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.modal-icon {
+  width: 60px;
+  height: 60px;
+  background-color: #fed7d7;
+  color: #c53030;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  margin: 0 auto 1.5rem;
+}
+
+.modal-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--text-color);
+}
+
+.modal-body {
+  color: var(--dark-gray);
+  margin-bottom: 2rem;
+  line-height: 1.5;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.btn-cancel, .btn-confirm {
+  padding: 0.75rem 1.5rem;
   border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+  font-size: 0.95rem;
+}
+
+.btn-cancel {
+  background-color: white;
+  border: 1px solid var(--light-gray);
+  color: var(--text-color);
+}
+
+.btn-cancel:hover {
+  background-color: var(--light-gray);
+}
+
+.btn-confirm {
+  background-color: var(--danger-color);
+  color: white;
+}
+
+.btn-confirm:hover {
+  background-color: #c53030;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(229, 62, 62, 0.3);
+}
+
+.btn-confirm:disabled, .btn-cancel:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-edit {
+  background-color: rgb(250, 250, 250);
+  color: var(--text-color);
+  border: 1px solid var(--light-gray);
+  width: auto;
 }
 
 .btn-edit:hover {
-  background-color: var(--primary-color);
-  color: white;
+  background-color: var(--light-gray);
+  color: var(--primary-color);
   transform: translateY(-2px);
-}
-
-.btn-secondary {
-  background-color: rgb(250, 250, 250);
-  color: #718096;
-}
-
-.btn-secondary:hover {
-  background-color: #718096;
-  color: white;
-  transform: translateY(-2px);
-}
-
-
-.loading, .no-incidents, .error {
-  text-align: center;
-  padding: 3rem;
-  font-size: 1.2rem;
-  color: var(--dark-gray);
-}
-
-.error {
-  color: var(--danger-color);
-  background-color: #fed7d7;
-  border: 1px solid var(--danger-color);
-  border-radius: 8px;
 }
 </style>
