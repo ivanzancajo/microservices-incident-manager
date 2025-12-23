@@ -1,72 +1,67 @@
-# ⚙️ Sistema de Gestión de Incidencias (Arquitectura de Microservicios)
+# ⚙️ Sistema de Gestión de Incidencias (Microservicios)
 
-Este proyecto implementa una plataforma completa para la **gestión de usuarios e incidencias**, migrada desde una arquitectura monolítica a una arquitectura de **microservicios contenerizada**. El sistema ha sido diseñado siguiendo principios de **desacoplamiento**, **escalabilidad** y **aislamiento de datos (Database per Service)**, utilizando un **API Gateway (BFF)** para orquestar la comunicación con el Frontend.
+Este proyecto implementa una plataforma completa para la **gestión de usuarios e incidencias**, basada en una arquitectura de **microservicios contenerizada**. El sistema ha sido diseñado siguiendo principios de **desacoplamiento**, **escalabilidad** y **aislamiento de datos**, utilizando un **API Gateway (BFF)** como único punto de entrada.
 
 ---
 
-## 🚀 Arquitectura y Tecnologías Clave
+## 🚀 Arquitectura y Tecnologías
 
 El sistema se compone de los siguientes contenedores orquestados mediante **Docker Compose**:
 
 | Servicio | Tecnología | Rol Principal | Puerto (Host) |
 | :--- | :--- | :--- | :--- |
-| **Frontend** | Vue.js 3 + Nginx | Interfaz de usuario (SPA). Nginx actúa como Reverse Proxy. | `5173` |
-| **BFF Gateway** | Python (FastAPI) | **Backend for Frontend**. Agrega y transforma datos de usuarios e incidencias. | `8080` |
-| **Users Service** | Python (FastAPI) | Microservicio de gestión de **usuarios**. | `8001` |
-| **Incidents Service** | Python (FastAPI) | Microservicio de gestión de **incidencias**. | `8002` |
-| **Databases** | PostgreSQL 15 | Dos instancias independientes (`users-db`, `incidents-db`). | Interno |
+| **Frontend** | Vue.js 3 + Vite + Nginx | Interfaz de usuario (SPA). | `5173` |
+| **BFF Gateway** | Python (FastAPI) | **Backend for Frontend**. Agrega datos y enruta peticiones. | `8080` |
+| **Users Service** | Python (FastAPI) | Gestión de usuarios y **Autenticación (JWT)**. | *Interno* |
+| **Incidents Service** | Python (FastAPI) | Gestión del ciclo de vida de incidencias. | *Interno* |
+| **Databases** | PostgreSQL 15 | Dos instancias independientes (`users-db`, `incidents-db`). | *Interno* |
 
-### Principios de Diseño
+### Principios de Diseño Implementados
 
-* **Database per Service**: Aislamiento estricto de datos. No hay claves foráneas directas entre los dominios de Usuarios e Incidencias.
-* **API Composition (Orquestación)**: El **BFF Gateway** "hidrata" las respuestas combinando datos de múltiples servicios (ej. adjuntar detalles del usuario a una incidencia) en memoria antes de enviarlos al cliente.
-* **Resiliencia y Consistencia Eventual**: Manejo de referencias rotas (ej. un usuario eliminado) sin romper la integridad de las incidencias históricas.
-* **Red Interna**: Los microservicios se comunican a través de una red bridge interna (`app-network`), exponiendo solo el Frontend y el Gateway al host.
+* **Database per Service:** Aislamiento estricto. Usuarios e Incidencias tienen sus propias bases de datos PostgreSQL.
+* **API Gateway / BFF:** El frontend nunca habla directamente con los microservicios. El Gateway ("hidrata") las respuestas combinando datos (ej. unir `user_id` de una incidencia con los datos reales del usuario).
+* **Seguridad JWT + Refresh Tokens:** Implementación robusta de autenticación con tokens de acceso (vida corta) y tokens de refresco (vida larga) con rotación automática en el cliente.
+* **Red Interna:** Por seguridad, los microservicios de backend no exponen puertos al host por defecto; toda comunicación pasa por la red interna de Docker (`internal-network`).
 
 ---
 
-## 🛠️ Instalación y Despliegue Local
+## 🛠️ Instalación y Despliegue
 
 ### Requisitos Previos
 
-* **Docker Engine**
-* **Docker Compose (v2)**
-* Asegúrate de tener el puerto `5173` libre en tu máquina.
+* **Docker Engine** & **Docker Compose (v2)**
+* Puerto `5173` y `8080` libres en tu máquina.
 
 ### Pasos de Despliegue
 
 1.  **Clonar el repositorio**:
-
     ```bash
     git clone [https://gitlab.inf.uva.es/diegveg/practica-dbcs-l07.git](https://gitlab.inf.uva.es/diegveg/practica-dbcs-l07.git)
     cd practica-dbcs-l07
     ```
 
-2.  **Configurar variables de entorno**
-    Copia el archivo de ejemplo. La configuración por defecto está lista para funcionar (*out of the box*).
-
+2.  **Configurar entorno**:
+    Copia el archivo de ejemplo para establecer las variables de entorno.
     ```bash
     cp .env.example .env
     ```
 
-3.  **Construir y arrancar los servicios**:
-    Esto levantará todos los contenedores en modo *detached* (`-d`).
-
+3.  **Construir y arrancar**:
+    Levanta todos los servicios en segundo plano.
     ```bash
     docker compose up -d --build
     ```
 
-4.  **Acceder a la aplicación**
-    Abre tu navegador web en:
-    **`http://localhost:5173`**
+4.  **Acceder a la aplicación**:
+    Abre tu navegador en: **`http://localhost:5173`**
 
 ---
 
 ## 🧪 Carga de Datos de Prueba (Seed)
 
-El proyecto incluye un script de inicialización (`init_db.py`) alojado en el contenedor del **Gateway**. Este script es fundamental para poblar ambas bases de datos con usuarios e incidencias ficticias y verificar que la comunicación entre microservicios (a través del Gateway) funciona correctamente.
+El proyecto incluye un script de inicialización (`init_db.py`) dentro del contenedor del Gateway. Este script crea usuarios, se loguea para obtener tokens JWT reales y genera incidencias asociadas.
 
-Con los contenedores corriendo, ejecuta el siguiente comando:
+Una vez los contenedores estén corriendo (`healthy`), ejecuta:
 
 ```bash
 docker compose exec gateway python init_db.py
@@ -84,10 +79,7 @@ Gracias a FastAPI, la documentación interactiva se genera automáticamente. En 
 
 - **Gateway (BFF)**: http://localhost:8080/docs  
   - Ver aquí endpoints agregados como `/incidencias-detalladas`.
-- **Users Service**: http://localhost:8001/docs  
-  - Gestión CRUD directa de usuarios.
-- **Incidents Service**: http://localhost:8002/docs  
-  - Gestión CRUD directa de incidencias.
+- **Desarrolladores**: Si necesitas acceder directamente a los Swagger de los microservicios individuales (users o incidents) para depuración, descomenta las líneas de ports en el archivo docker-compose.yml y reinicia los contenedores.
 
 ## 📂 Estructura del Proyecto
 
@@ -101,9 +93,9 @@ practica-dbcs-l07/ \
 
 
 ## 👥 Autores
-
+**Grupo L07 - Curso 2025/2026**
 - Daniel Fernández García  
 - Diego Vegas Losada  
 - Iván Zancajo Arenas  
 
-**Grupo L07 - Curso 2025/2026**
+
