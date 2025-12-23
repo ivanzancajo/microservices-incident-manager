@@ -8,7 +8,7 @@ SECRET_KEY = os.getenv("JWT_SECRET")
 ALGORITHM = os.getenv("JWT_ALGORITHM")
 
 # Define que esperamos el token en el header 'Authorization: Bearer <token>'
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="http://localhost:5173/api/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 def get_current_user_id(token: str = Depends(oauth2_scheme)) -> int:
     # Preparamos la excepción 401
