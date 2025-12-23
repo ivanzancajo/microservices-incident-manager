@@ -57,7 +57,24 @@ const fetchIncidents = async () => {
 
 const fetchUsers = async () => {
   try {
-    users.value = await getUsers();
+    // 1. Obtenemos todos los usuarios (o el backend podría filtrar, pero lo hacemos aquí según solicitado)
+    const allUsers = await getUsers();
+    
+    // 2. Recuperamos el email del usuario logueado
+    const loggedEmail = localStorage.getItem('user_email');
+
+    // 3. Filtramos la lista para dejar solo al usuario actual
+    if (loggedEmail) {
+      users.value = allUsers.filter(u => u.email === loggedEmail);
+      
+      // 4. Opcional: Auto-seleccionar al usuario en el formulario para ahorrar un clic
+      if (users.value.length > 0) {
+        newIncident.value.user_id = users.value[0].id;
+      }
+    } else {
+      // Si no hay email en localstorage, no mostramos usuarios (o mostramos todos como fallback)
+      users.value = [];
+    }
   } catch (err) {
     error.value = `Error al cargar los usuarios: ${err.message}`;
   }
