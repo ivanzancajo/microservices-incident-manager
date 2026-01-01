@@ -36,7 +36,7 @@ El sistema se compone de los siguientes contenedores orquestados mediante **Dock
 
 1.  **Clonar el repositorio**:
     ```bash
-    git clone [https://gitlab.inf.uva.es/diegveg/practica-dbcs-l07.git](https://gitlab.inf.uva.es/diegveg/practica-dbcs-l07.git)
+    git clone [https://github.com/ivanzancajo/microservices-incident-manager.git](https://github.com/ivanzancajo/microservices-incident-manager.git)
     cd practica-dbcs-l07
     ```
 
@@ -90,12 +90,4 @@ practica-dbcs-l07/ \
 ├── gateway/ # BFF Pattern (incluye script init_db.py)\
 ├── users-service/ # Microservicio de Usuarios (App + DB Model)\
 └── incidents-service/ # Microservicio de Incidencias (App + DB Model)
-
-
-## 👥 Autores
-**Grupo L07 - Curso 2025/2026**
-- Daniel Fernández García  
-- Diego Vegas Losada  
-- Iván Zancajo Arenas  
-
 
