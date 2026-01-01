@@ -37,7 +37,7 @@ El sistema se compone de los siguientes contenedores orquestados mediante **Dock
 1.  **Clonar el repositorio**:
     ```bash
     git clone [https://github.com/ivanzancajo/microservices-incident-manager.git](https://github.com/ivanzancajo/microservices-incident-manager.git)
-    cd practica-dbcs-l07
+    cd microservices-incident-manager
     ```
 
 2.  **Configurar entorno**:
